@@ -90,6 +90,11 @@ export const ScriptDb = {
         `;
         const rows = await this.__query(query, [this.scriptTableName]);
         return rows.length === 1;
-    }
+    },
+
+    isConnected: function () {
+        return this.db != null;
+    },
+
 };
 
