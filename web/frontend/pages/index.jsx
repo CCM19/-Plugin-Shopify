@@ -1,12 +1,6 @@
-import React, {useCallback, useState} from "react";
-
-import {Button, Card, Form, TextContainer, TextField,FormLayout} from "@shopify/polaris";
-
-
-import { useAuthenticatedFetch } from "../hooks";
-
-
-
+import React, {useCallback, useState, useEffect} from "react";
+import {Button, Card, Form, TextContainer, TextField} from "@shopify/polaris";
+import {useAuthenticatedFetch} from "../hooks";
 /*
 Component for the Textfield
 
@@ -31,31 +25,39 @@ const ValidationTextField = ()=>{
           setError(true);
           return;
       }
+      try{
+          const db =await initDB();
+          console.log(db);
+      }catch (error){
+          console.error(error);
+      }
 
       try {
           const response = await saveScript(value);
           console.log(response);
       }catch (e) {
-          console.log("script couldn't be saved");
+          console.error("script couldn't be saved");
       }
+      const insertScript = await modifyTemplate();
 
-        try{
-          const insertScript = await modifyTemplate();
-          console.log(insertScript);
-        }catch (e) {
-            console.log("Template couldn't be modified")
-        }
 
   }, [value]);
 
+    const initDB = async () =>{
+        return await fetch('/api/get/db/status',{
+            method: 'GET',
+            headers:{
+                'Content-Type': 'application/json'
+            }
+        });
+    }
 
     const saveScript = async (value) => {
-        const response = await fetch('/api/script/save', {
+        return await fetch('/api/script/save', {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({value}),
         });
-
     }
     const getScript = async () =>{
       try {
@@ -70,52 +72,75 @@ const ValidationTextField = ()=>{
           console.log(script);
           return script;
       }catch (error){
-          console.log("couldn't retrieve script from DB")
+          console.error(error)
       }
     }
 
-    const getTemplate = async () => {
-        const templateResponse = await fetch('/admin/themes/current.json', {
-            method: "GET",
+    const getMainThemeId = async () => {
+        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        const shopUrl = process.env.SHOPIFY_SHOP_URL;
+        const themeResponse = await fetch(`https://${shopUrl}/admin/api/2023-01/themes.json`, {
+            method: 'GET',
             headers: {
-                "Content-Type": "application/json",
-                "X-Shopify-Access-Token": "<SHOPIFY_API_KEY>"
+                'Content-Type': 'application/json',
+                'X-Shopify-Access-Token': accessToken,
             },
         });
-    }
+        const themeData = await themeResponse.json();
+        const mainTheme = themeData.themes.find(theme => theme.role === 'main');
+        return mainTheme.id;
+    };
+
+    const getMainTemplate = async () => {
+        const mainThemeId = await getMainThemeId();
+        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+        const shopUrl = process.env.SHOPIFY_SHOP_URL;
+        const templateResponse = await fetch(`https://${shopUrl}/admin/api/2023-01/themes/${mainThemeId}/assets.json?asset[key]=layout/theme.liquid`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Shopify-Access-Token': accessToken,
+            },
+        });
+        const templateData = await templateResponse.json();
+        return templateData.asset.value;
+    };
 
     const saveTemplate = async (templateData) => {
+        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
         const saveTemplateResponse = await fetch('/admin/themes/current.json', {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "X-Shopify-Access-Token": "<SHOPIFY_API_KEY>"
+                "X-Shopify-Access-Token": accessToken
             },
             body: JSON.stringify(templateData),
         });
-
+        return await saveTemplateResponse.json();
     }
 
 
     const modifyTemplate = async () => {
+    try {
 
-        const templateData= await getTemplate();
+
         const script = await getScript();
 
         const headIndex = templateData.indexOf("<Head>");
         const headCloseIndex = templateData.indexOf("</Head>");
 
-        const saveTemplate = saveTemplate( templateData.substring(0,headIndex + 6)+script +
-        templateData.substring(headIndex +6,headCloseIndex) +
-        templateData.substring(headCloseIndex));
+        const saveTemplate = await saveTemplate(templateData.substring(0, headIndex + 6) + script +
+            templateData.substring(headIndex + 6, headCloseIndex) +
+            templateData.substring(headCloseIndex));
 
 
         return ("success");
+    }catch (e) {
+        return ("error");
+    }
     }
 
-
-  // const error = handleError(value) ?  "invalid Snippet pleas check your input or contact support" : "";
-  return (
+    return (
       <Form onSubmit={handleSubmit}>
         <TextField
             label="Pleas insert your, from the devine Backend given, CCM19 Skript."
