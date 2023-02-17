@@ -1,10 +1,7 @@
-import React, {useCallback, useState, useEffect} from "react";
+import React, {useCallback, useState} from "react";
 import {Button, Card, Form, TextContainer, TextField} from "@shopify/polaris";
-import {useAuthenticatedFetch} from "../hooks";
-/*
-Component for the Textfield
+import {useAppQuery, useAuthenticatedFetch} from "../hooks";
 
- */
 const ValidationTextField = ()=>{
 
   const [helperText,setHelperText] = useState('');
@@ -72,66 +69,38 @@ const ValidationTextField = ()=>{
           console.log(script);
           return script;
       }catch (error){
-          console.error(error)
+          console.error("nespresso get script")
       }
     }
 
-    const getMainThemeId = async () => {
-        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-        const shopUrl = process.env.SHOPIFY_SHOP_URL;
-        const themeResponse = await fetch(`https://${shopUrl}/admin/api/2023-01/themes.json`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Shopify-Access-Token': accessToken,
-            },
+    const getMainTemplate=async ()=>{
+    try {
+        const response = await fetch('/api/shop-data',{
+            method:"GET",
+            headers: {"Content-Type": "application/json"},
         });
-        const themeData = await themeResponse.json();
-        const mainTheme = themeData.themes.find(theme => theme.role === 'main');
-        return mainTheme.id;
-    };
+        const template = await response.json();
+        console.log(template);
+        return template;
+    }catch (error) {
+     console.error(error);
+    }
 
-    const getMainTemplate = async () => {
-        const mainThemeId = await getMainThemeId();
-        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-        const shopUrl = process.env.SHOPIFY_SHOP_URL;
-        const templateResponse = await fetch(`https://${shopUrl}/admin/api/2023-01/themes/${mainThemeId}/assets.json?asset[key]=layout/theme.liquid`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Shopify-Access-Token': accessToken,
-            },
-        });
-        const templateData = await templateResponse.json();
-        return templateData.asset.value;
-    };
 
-    const saveTemplate = async (templateData) => {
-        const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
-        const saveTemplateResponse = await fetch('/admin/themes/current.json', {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Shopify-Access-Token": accessToken
-            },
-            body: JSON.stringify(templateData),
-        });
-        return await saveTemplateResponse.json();
     }
 
 
     const modifyTemplate = async () => {
     try {
-
-
+        const mainTemplate = getMainTemplate();
         const script = await getScript();
 
-        const headIndex = templateData.indexOf("<Head>");
-        const headCloseIndex = templateData.indexOf("</Head>");
+        const headIndex = mainTemplate.indexOf("<Head>");
+        const headCloseIndex = mainTemplate.indexOf("</Head>");
 
-        const saveTemplate = await saveTemplate(templateData.substring(0, headIndex + 6) + script +
-            templateData.substring(headIndex + 6, headCloseIndex) +
-            templateData.substring(headCloseIndex));
+        const saveTemplate = await saveTemplate(mainTemplate.substring(0, headIndex + 6) + script +
+            mainTemplate.substring(headIndex + 6, headCloseIndex) +
+            mainTemplate.substring(headCloseIndex));
 
 
         return ("success");
@@ -139,7 +108,6 @@ const ValidationTextField = ()=>{
         return ("error");
     }
     }
-
     return (
       <Form onSubmit={handleSubmit}>
         <TextField
@@ -164,8 +132,8 @@ const ValidationTextField = ()=>{
 
 export default function Homepage() {
 
-  return (
-      <div className="HomePage">
+    return (
+    <div className="HomePage">
         <Card.Header actions={[{content: 'CCM19'}]} title="CCM19 Integration"></Card.Header>
         <Card.Section>
           <TextContainer>
