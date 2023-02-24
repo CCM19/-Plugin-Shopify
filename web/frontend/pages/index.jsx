@@ -1,12 +1,15 @@
 import React, {useCallback, useState} from "react";
-import {Button, Card, Form, TextContainer, TextField} from "@shopify/polaris";
-import {useAppQuery, useAuthenticatedFetch} from "../hooks";
+import {Button, Card, Form, Link, TextContainer, TextField, TextStyle} from "@shopify/polaris";
+import {useAuthenticatedFetch} from "../hooks";
+import {useTranslation} from "react-i18next";
+
 
 const ValidationTextField = ()=>{
 
   const [helperText,setHelperText] = useState('');
   const [error, setError] = useState(false);
   const [value, setValue] = useState('');
+  const { t } = useTranslation();
 
   const handleChange = useCallback((newValue)=>setValue(newValue),[]);
 
@@ -22,6 +25,7 @@ const ValidationTextField = ()=>{
           setError(true);
           return;
       }
+
       try{
           const db =await initDB();
           console.log(db);
@@ -57,20 +61,17 @@ const ValidationTextField = ()=>{
         });
     }
     const getScript = async () =>{
-      try {
-          const response = await fetch('/api/script/load',{
+
+        const response = await fetch('/api/script-load',{
               method: 'GET',
               headers:{
                   'Content-Type': 'application/json'
               }
           });
+            console.log(response);
+            const script = await response.json();
+          return script.script;
 
-          const script = await response.json();
-          console.log(script);
-          return script;
-      }catch (error){
-          console.error("nespresso get script")
-      }
     }
 
     const getMainTemplate=async ()=>{
@@ -79,16 +80,12 @@ const ValidationTextField = ()=>{
             method:"GET",
             headers: {"Content-Type": "application/json"},
         });
-        const template = await response.json();
-        console.log(template);
-        return template;
+        return await response.json();
     }catch (error) {
-     console.error(error);
+        console.log ("Main template defekt")
+         console.error(error);
     }
-
-
     }
-
 
     const modifyTemplate = async () => {
     try {
@@ -108,10 +105,12 @@ const ValidationTextField = ()=>{
         return ("error");
     }
     }
+
+
     return (
       <Form onSubmit={handleSubmit}>
         <TextField
-            label="Pleas insert your, from the devine Backend given, CCM19 Skript."
+            label={t('form.field.label')}
             placeholder="<script src=http://site/public/app.js?apiKey=1337753522109847&amp;domain=1337  referrerpolicy=origin></script>"
             margin="normal"
             variant="outlined"
@@ -122,7 +121,7 @@ const ValidationTextField = ()=>{
             helperText={helperText}
             autoComplete="off"
         />
-        <Button submit>Save</Button>
+        <Button submit>{t('form.field.button')}</Button>
       </Form>
   );
 
@@ -131,14 +130,20 @@ const ValidationTextField = ()=>{
 
 
 export default function Homepage() {
+    const { t } = useTranslation();
+    const linkText=t('form.field.homepage');
+    const linkUrl=t('form.field.link');
+
 
     return (
     <div className="HomePage">
         <Card.Header actions={[{content: 'CCM19'}]} title="CCM19 Integration"></Card.Header>
         <Card.Section>
           <TextContainer>
-            This ist the official CCM19 Integration App. For USage you will need the CCM19 Script from
-            your CCM19 Backend.
+              <TextStyle variation={"subdued"}>
+                  {linkText}
+                  <Link url={linkUrl}>{linkUrl}</Link>
+              </TextStyle>
           </TextContainer>
         </Card.Section>
         <Card.Section title="">

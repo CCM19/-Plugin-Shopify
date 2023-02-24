@@ -16,13 +16,13 @@ const resources = {
             },
         },
     },
-    de: {
+    ger: {
         translation: {
             form: {
                 field: {
                     label: 'Bitte geben Sie hier den Code-Schnipsel vom CCM19 Backend ein.',
                     button: 'Speichern',
-                    homepage: ' Wilkommen in der offizielen App zur CCM19 Integration in Shopify. Zur benutzung bedarf es nur den COde Schnipsel aus dem CCM19 Backend. Sie haben noch keinen? Dann registrieren sie sich jetzt unter:',
+                    homepage: ' Willkommen in der offizielen App zur CCM19 Integration in Shopify. Zur benutzung bedarf es nur den COde Schnipsel aus dem CCM19 Backend. Sie haben noch keinen? Dann registrieren sie sich jetzt unter:',
                     link:"https://www.ccm19.de/",
                 },
             },
@@ -32,7 +32,7 @@ const resources = {
 
 i18n.use(initReactI18next).init({
     resources,
-    lng: 'de',
+    lng: 'ger',
     fallbackLng: 'en',
 });
 
