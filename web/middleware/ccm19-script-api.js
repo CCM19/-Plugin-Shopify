@@ -1,14 +1,11 @@
 import express from "express";
-import { ScriptDb } from "../ccm19-script-db.js";
+import {ScriptDb} from "../ccm19-script-db.js";
 import bodyParser from "body-parser";
 import '@shopify/shopify-api/adapters/node';
-import {ApiVersion, Shopify} from '@shopify/shopify-api';
-import { getSessionToken } from '@shopify/app-bridge-utils';
-
 import winston, {transports} from "winston";
-import createAppBridge from "@shopify/app-bridge";
+import fetch from "node-fetch";
+import Shopify from "shopify-api-node";
 
-const app = express();
 const port = process.env.PORT || 5000;
 
 
@@ -16,6 +13,7 @@ const logger = winston.createLogger({
     level: 'debug',
     format: winston.format.combine(
         winston.format.timestamp(),
+        winston.format.prettyPrint(),
         winston.format.json()
     ),
     transports: [
@@ -24,65 +22,45 @@ const logger = winston.createLogger({
 });
 
 
+
 async function getMainThemeID(shop, accessToken){
-    const query = `
-    {
-      shop {
-        id
-        name
-        primaryDomain {
-          url
-        }
-        themes(first: 10) {
-          edges {
-            node {
-              id
-              name
-              role
-              themeStoreId
-              previewable
-              processing
-              storefrontPreviewable
-              // livePreviewable
-              // templateSuffix
-            }
-          }
-        }
-      }
+    console.error(shop)
+    try {
+
+        const response = await fetch(`https://${shop}/admin/themes.json?role=main`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Shopify-Access-Token': accessToken,
+            },
+        });
+        const data = await response.json();
+        return data.themes[0].id;
+    }catch (error){
+        logger.error(error);
     }
-  `;
-
-    const response = await fetch(`https://${shop}/admin/api/2023-01/graphql.json`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Shopify-Access-Token': accessToken
-        },
-        body: JSON.stringify({ query })
-    });
-    const responseJson = await response.json();
-    const themes = responseJson.data.shop.themes.edges;
-    const mainTheme = themes.find((theme) => theme.node.role === 'main');
-    return mainTheme.node.id;
 }
-
 async function getMainTemplate(shop, accessToken, themeID){
-    const assetKey = `templates/index.liquid`;
-    const response = await fetch(`https://${shop}/admin/api/2023-01/themes/${themeID}/assets.json?asset[key]=${assetKey}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Shopify-Access-Token': accessToken
-        }
-    });
-    const responseJson = await response.json();
-    return responseJson.asset.value;
+    try {
+
+        const assetKey = `templates/layout/theme.liquid`;
+        const response = await fetch(`https://${shop}/admin/api/2023-01/themes/${themeID}/assets.json?asset[key]=${assetKey}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Shopify-Access-Token': accessToken
+            }
+        });
+        const responseData = await response.json();
+        const fileContents = responseData.asset && responseData.asset.value;
+        return fileContents;
+    } catch (error) {
+        logger.error(error);
+    }
 }
+
 
 
 export default function applyScriptApiEndpoints(app) {
-
-
 
     app.use(express.json());
     app.use(bodyParser.json());
@@ -105,11 +83,13 @@ export default function applyScriptApiEndpoints(app) {
         }
     });
 
-    app.get('/api/script/load', async (req, res) => {
+    app.get('/api/script-load', async (req, res) => {
         try {
             const script = await ScriptDb.read(1);
-            return res.send(script.script);
+            logger.debug(script);
+            return res.send(script);
         } catch (error) {
+            logger.error(error);
             return res.status(404).send({ status: 'error', message: error.message });
         }
     });
@@ -124,35 +104,41 @@ export default function applyScriptApiEndpoints(app) {
         }
     })
 
+    const getShopData = async (shop, accessToken) => {
+        const shopify = new Shopify({
+            shopName: shop,
+            accessToken: accessToken,
+            apiVersion: '2023-01'
+        });
+
+        return await shopify.shop.get();
+    };
 
     app.get('/api/shop-data', async (req, res) => {
 
+        const shop = res.locals.shopify.session.shop;
+        const accessToken = res.locals.shopify.session.accessToken;
 
-        const appBridgeConfig = {
-            apiKey: process.env.SHOPIFY_API_KEY,
-            shopOrigin: req.query.shop,
-            forceRedirect: true,
-        };
-        const appBridge = createAppBridge(appBridgeConfig);
+        const shopData = await getShopData(shop,accessToken);
+        const apiKey= shopData.myshopify_domain;
 
-
-
-        const { shop, accessToken } = await getSessionToken(appBridge);
-
+        const themeID = await getMainThemeID(shop, accessToken);
+        const template = await getMainTemplate(shop, accessToken, themeID);
+        logger.debug("---------------------------------------------------------")
+        logger.debug(template);
 
         try {
-            const themeID = await getMainThemeID(shop, accessToken);
-            const mainTemplate = await getMainTemplate(shop, accessToken, themeID);
-            res.send({
+            res.status(200).send({
                 status: 'success',
-                data: { mainTemplate }
+                data: {
+                    shop,
+                    accessToken,
+                    template
+                }
             });
         } catch (error) {
-            res.status(500).send({ status: 'error', message: error.message });
+            res.status(500).send({status: 'error', message: error.message});
         }
-    });
-    app.use(ApiVersion.Unstable, (req, res, next) => {
-        next();
     });
 
     // Handle errors
@@ -160,6 +146,7 @@ export default function applyScriptApiEndpoints(app) {
         console.error(err.stack);
         res.status(500).send({ status: 'error', message: err.message });
     });
+
 
 
 }
