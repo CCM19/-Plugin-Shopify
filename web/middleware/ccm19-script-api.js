@@ -2,29 +2,18 @@ import express from "express";
 import {ScriptDb} from "../ccm19-script-db.js";
 import bodyParser from "body-parser";
 import '@shopify/shopify-api/adapters/node';
-import winston, {transports} from "winston";
 import fetch from "node-fetch";
 import Shopify from "shopify-api-node";
+import {logger, modifyTemplateHelper} from "../helpers/script-helper.js";
 
 const port = process.env.PORT || 5000;
 
 
-const logger = winston.createLogger({
-    level: 'debug',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.prettyPrint(),
-        winston.format.json()
-    ),
-    transports: [
-        new transports.File({ filename: 'logs/app.log' })
-    ]
-});
+
 
 
 
 async function getMainThemeID(shop, accessToken){
-    console.error(shop)
     try {
 
         const response = await fetch(`https://${shop}/admin/themes.json?role=main`, {
@@ -42,7 +31,7 @@ async function getMainThemeID(shop, accessToken){
 async function getMainTemplate(shop, accessToken, themeID){
     try {
 
-        const assetKey = `templates/layout/theme.liquid`;
+        const assetKey = `layout/theme.liquid`;
         const response = await fetch(`https://${shop}/admin/api/2023-01/themes/${themeID}/assets.json?asset[key]=${assetKey}`, {
             method: 'GET',
             headers: {
@@ -51,19 +40,51 @@ async function getMainTemplate(shop, accessToken, themeID){
             }
         });
         const responseData = await response.json();
-        const fileContents = responseData.asset && responseData.asset.value;
-        return fileContents;
+        return responseData.asset && responseData.asset.value;
     } catch (error) {
         logger.error(error);
     }
 }
 
 
+async function updateTemplate(shop, accessToken, themeID, updatedTemplate) {
+    try {
+        const assetKey = 'layout/theme.liquid';
+        const response = await fetch(`https://${shop}/admin/api/2023-01/themes/${themeID}/assets.json`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Shopify-Access-Token': accessToken,
+            },
+            body: JSON.stringify({
+                asset: {
+                    key: assetKey,
+                    value: updatedTemplate,
+                },
+            }),
+        });
+        return await response.json();
+    } catch (error) {
+        logger.error("error in updateTemplate")
+        logger.error(error);
+    }
+}
+
 
 export default function applyScriptApiEndpoints(app) {
 
     app.use(express.json());
     app.use(bodyParser.json());
+
+    const getShopData = async (shop, accessToken) => {
+        const shopify = new Shopify({
+            shopName: shop,
+            accessToken: accessToken,
+            apiVersion: '2023-01'
+        });
+
+        return await shopify.shop.get();
+    };
 
 
     app.post('/api/script/save', async (req, res) => {
@@ -83,16 +104,6 @@ export default function applyScriptApiEndpoints(app) {
         }
     });
 
-    app.get('/api/script-load', async (req, res) => {
-        try {
-            const script = await ScriptDb.read(1);
-            logger.debug(script);
-            return res.send(script);
-        } catch (error) {
-            logger.error(error);
-            return res.status(404).send({ status: 'error', message: error.message });
-        }
-    });
 
     app.get('/api/get/db/status', async (req,res)=>{
         try{
@@ -100,43 +111,31 @@ export default function applyScriptApiEndpoints(app) {
             const isConnected = ScriptDb.isConnected();
             res.send({status:'success',isConnected});
         }catch (error) {
+            logger.error(error)
             res.status(500).send({status:'error',message:error.message});
         }
     })
 
-    const getShopData = async (shop, accessToken) => {
-        const shopify = new Shopify({
-            shopName: shop,
-            accessToken: accessToken,
-            apiVersion: '2023-01'
-        });
 
-        return await shopify.shop.get();
-    };
-
-    app.get('/api/shop-data', async (req, res) => {
-
-        const shop = res.locals.shopify.session.shop;
-        const accessToken = res.locals.shopify.session.accessToken;
-
-        const shopData = await getShopData(shop,accessToken);
-        const apiKey= shopData.myshopify_domain;
-
-        const themeID = await getMainThemeID(shop, accessToken);
-        const template = await getMainTemplate(shop, accessToken, themeID);
-        logger.debug("---------------------------------------------------------")
-        logger.debug(template);
-
+    app.get('/api/template/modify', async (req, res) => {
         try {
-            res.status(200).send({
-                status: 'success',
-                data: {
-                    shop,
-                    accessToken,
-                    template
-                }
-            });
+
+            const shopData = await getShopData(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
+
+
+            const themeID = await getMainThemeID(shopData.myshopify_domain,  res.locals.shopify.session.accessToken);
+
+            const template = await getMainTemplate(shopData.myshopify_domain.toString(),  res.locals.shopify.session.accessToken, themeID);
+
+            const script = await ScriptDb.read(1);
+            logger.debug(script);
+            const modifiedTemplate = await modifyTemplateHelper(script.script,template);
+
+            const response = await updateTemplate(shopData.myshopify_domain,res.locals.shopify.session.accessToken,themeID,modifiedTemplate);
+
+            res.send({status:'success',response})
         } catch (error) {
+            logger.error(error);
             res.status(500).send({status: 'error', message: error.message});
         }
     });
