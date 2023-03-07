@@ -9,10 +9,10 @@ const ValidationTextField = ()=>{
 
     const [helperText, setHelperText] = useState('');
     const [error, setError] = useState(false);
-    const [value, setValue] = useState('');
+    const [inputScript, setInputScript] = useState('');
     const {t} = useTranslation();
 
-    const handleChange = useCallback((newValue) => setValue(newValue), []);
+    const handleChange = useCallback((newValue) => setInputScript(newValue), []);
 
   const fetch = useAuthenticatedFetch();
 
@@ -20,31 +20,31 @@ const ValidationTextField = ()=>{
     const handleSubmit = useCallback( async (event) => {
         event.preventDefault();
 
+
         const regexConst = /<script\s+src="(https?:\/\/[^\/]+\/public\/(ccm19|app)\.js\?[^"]+)"\s+referrerpolicy="origin">\s*<\/script>/;
-        if (!regexConst.test(value)) {
+
+        //checks if script is correct
+        if (!regexConst.test(inputScript)) {
             setHelperText('The script provided is not valid. Please insert a valid script or contact Support.');
             setError(true);
             return;
         }
-
-      try{
-          const db =await initDB();
+      try {
+          //initialises DB
+          const db = await initDB();
           console.log(db);
+          //saves script to DB Line 1
+          const response = await saveScript(encodeURIComponent(inputScript));
+          console.log(response);
       }catch (error){
           console.error(error);
       }
 
-      try {
-          const response = await saveScript(encodeURI(value));
-          console.log(response);
-      }catch (e) {
-          console.error("script couldn't be saved");
-      }
       const insertScript = await modifyTemplate();
         console.log(insertScript);
 
 
-  }, [value]);
+  }, [inputScript]);
 
     const initDB = async () =>{
         return await fetch('/api/get/db/status',{
@@ -55,11 +55,11 @@ const ValidationTextField = ()=>{
         });
     }
 
-    const saveScript = async (value) => {
+    const saveScript = async (inputScript) => {
         return await fetch('/api/script/save', {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({value}),
+            body: JSON.stringify({inputScript}),
         });
     }
 
@@ -85,13 +85,12 @@ const ValidationTextField = ()=>{
                 placeholder="<script src=http://site/public/app.js?apiKey=1337753522109847&amp;domain=1337  referrerpolicy=origin></script>"
                 margin="normal"
                 variant="outlined"
-                value={value}
+                value={inputScript}
                 onChange={handleChange}
                 required
                 error={error}
                 helperText={helperText}
-                autoComplete="off"
-            />
+             autoComplete={"off"}/>
             <Button submit>{t('form.field.button')}</Button>
         </Form>
     );
@@ -115,7 +114,7 @@ export default function Homepage() {
               </TextStyle>
           </TextContainer>
         </Card.Section>
-        <Card.Section title="">
+        <Card.Section>
           <>
             <ValidationTextField/>
           </>
