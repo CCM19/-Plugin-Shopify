@@ -22,7 +22,13 @@ export const logger = winston.createLogger({
     ]
 });
 
-
+/**
+ * writes the encoded script int the beginning of the <head> if a head is available. If their is no head it writes it into the end of the body.
+ *
+ * @param script
+ * @param template
+ * @returns {Promise<string|*>}
+ */
 export async function modifyTemplateHelper(script, template) {
     try {
         // Define the regex pattern to look for the existing script tag
