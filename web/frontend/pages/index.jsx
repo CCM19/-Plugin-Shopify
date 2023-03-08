@@ -1,51 +1,74 @@
-import React, {useCallback, useEffect, useState} from "react";
-import {Button, Card, Form, Link, TextContainer, TextField, TextStyle} from "@shopify/polaris";
+import React, {useCallback, useState} from "react";
+import {Button, Card, Form, InlineError, Link, TextContainer, TextField, TextStyle} from "@shopify/polaris";
 import {useAuthenticatedFetch} from "../hooks";
 import {useTranslation} from "react-i18next";
 
 
-
+/**
+ * Core component for the handling of the input processing of it.
+ *
+ * @returns {JSX.Element}
+ * @constructor
+ */
 const ValidationTextField = ()=>{
+    const fetch = useAuthenticatedFetch();
 
-    const [helperText, setHelperText] = useState('');
+    const [success, setSuccess] = useState(false);
     const [error, setError] = useState(false);
     const [inputScript, setInputScript] = useState('');
     const {t} = useTranslation();
 
-    const handleChange = useCallback((newValue) => setInputScript(newValue), []);
+    const handleChange = (newValue) => setInputScript(newValue);
 
-  const fetch = useAuthenticatedFetch();
 
-    //Handles the button
     const handleSubmit = useCallback( async (event) => {
         event.preventDefault();
 
 
-        const regexConst = /<script\s+src="(https?:\/\/[^\/]+\/public\/(ccm19|app)\.js\?[^"]+)"\s+referrerpolicy="origin">\s*<\/script>/;
-
+        const regexConst = new RegExp(
+            `<script\\s+src="(https?://[^/]+/public/(ccm19|app)\\.js\\?[^"]+)"\\s+referrerpolicy="origin">\\s*</script>`
+        );
         //checks if script is correct
         if (!regexConst.test(inputScript)) {
-            setHelperText('The script provided is not valid. Please insert a valid script or contact Support.');
             setError(true);
+            setSuccess(false)
             return;
         }
-      try {
-          //initialises DB
-          const db = await initDB();
-          console.log(db);
-          //saves script to DB Line 1
-          const response = await saveScript(encodeURIComponent(inputScript));
-          console.log(response);
-      }catch (error){
-          console.error(error);
-      }
 
-      const insertScript = await modifyTemplate();
-        console.log(insertScript);
+        try {
+            const db = await initDB();
+            console.log(db);
+            const response = await saveScript(encodeURIComponent(inputScript));
+            console.log(response);
 
 
-  }, [inputScript]);
+        } catch (error) {
+            console.error(error);
+            setSuccess(false);
+            setError(true);
 
+        }
+        try {
+
+            const insertScript = await modifyTemplate();
+            setSuccess(true);
+            console.log(insertScript);
+
+        } catch (error) {
+            setSuccess(false);
+            setError(true);
+            console.error(error);
+
+        }
+
+
+    }, [inputScript]);
+
+    /**
+     * Initialises the Db if not already done
+     *
+     * @returns {Promise<Response<any, Record<string, any>, number>>}
+     */
     const initDB = async () =>{
         return await fetch('/api/get/db/status',{
             method: 'GET',
@@ -55,6 +78,12 @@ const ValidationTextField = ()=>{
         });
     }
 
+    /**
+     * saves the script
+     *
+     * @param inputScript
+     * @returns {Promise<Response<any, Record<string, any>, number>>}
+     */
     const saveScript = async (inputScript) => {
         return await fetch('/api/script/save', {
             method: "POST",
@@ -63,8 +92,12 @@ const ValidationTextField = ()=>{
         });
     }
 
+    /**
+     * starts the process of template modification
+     *
+     * @returns {Promise<Response<any, Record<string, any>, number>>}
+     */
     const modifyTemplate = async () => {
-
         return await fetch('/api/template/modify', {
             method: 'GET',
             headers: {
@@ -73,10 +106,6 @@ const ValidationTextField = ()=>{
         });
 
     }
-
-
-
-
 
     return (
         <Form onSubmit={handleSubmit}>
@@ -89,23 +118,40 @@ const ValidationTextField = ()=>{
                 onChange={handleChange}
                 required
                 error={error}
-                helperText={helperText}
              autoComplete={"off"}/>
+            {error && (
+                <InlineError message={t('form.field.errorMessage')}  fieldID={inputScript}/>
+            )}
+            {success && (
+                <div style={{ color: "green" }}>
+                    {t("form.field.successMessage")}
+                </div>
+            )}
+
             <Button submit>{t('form.field.button')}</Button>
         </Form>
     );
 
 };
-
+/**
+ *  Displays the components
+ * @returns {JSX.Element}
+ * @constructor
+ */
 export default function Homepage() {
     const { t } = useTranslation();
     const linkText=t('form.field.homepage');
     const linkUrl=t('form.field.link');
 
+    const headerAction={
+        content : "CCM19 Support",
+        url: "https://www.ccm19.de/en/support-request/",
+    }
+
 
     return (
     <div className="HomePage">
-        <Card.Header actions={[{content: 'CCM19'}]} title="CCM19 Integration"></Card.Header>
+        <Card.Header actions={[headerAction]} title="CCM19 Integration"></Card.Header>
         <Card.Section>
           <TextContainer>
               <TextStyle variation={"subdued"}>
