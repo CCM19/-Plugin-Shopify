@@ -8,11 +8,12 @@ import {logger, modifyTemplateHelper} from "../helpers/script-helper.js";
 
 const port = process.env.PORT || 5000;
 
-
-
-
-
-
+/**
+ * Fetches the ID of the Main theme of the store via the shopify api
+ * @param shop  shopUtl
+ * @param accessToken OAuth generated token
+ * @returns {Promise<*>}
+ */
 async function getMainThemeID(shop, accessToken){
     try {
 
@@ -28,6 +29,16 @@ async function getMainThemeID(shop, accessToken){
         logger.error(error);
     }
 }
+
+/**
+ * Fetches  the main template liquid for further manipulation
+ *
+ * @param shop shopUrl
+ * @param accessToken
+ * @param themeID retrieved from getMainThemeID
+ * @returns {Promise<*>}
+ */
+
 async function getMainTemplate(shop, accessToken, themeID){
     try {
 
@@ -46,7 +57,15 @@ async function getMainTemplate(shop, accessToken, themeID){
     }
 }
 
-
+/**
+ *  sends the updated template to the shopify api
+ *
+ * @param shop
+ * @param accessToken
+ * @param themeID
+ * @param updatedTemplate
+ * @returns {Promise<any>}
+ */
 async function updateTemplate(shop, accessToken, themeID, updatedTemplate) {
     try {
         const assetKey = 'layout/theme.liquid';
@@ -70,7 +89,11 @@ async function updateTemplate(shop, accessToken, themeID, updatedTemplate) {
     }
 }
 
-
+/**
+ * applyScriptApiEndpoints
+ *
+ * @param app
+ */
 export default function applyScriptApiEndpoints(app) {
 
     app.use(express.json());
@@ -87,24 +110,28 @@ export default function applyScriptApiEndpoints(app) {
     };
 
 
+    /**
+     * saves the script into the db if there is already a script it updates it.
+     */
     app.post('/api/script/save', async (req, res) => {
         try {
-            const { value } = req.body;
+            const { inputScript } = req.body;
             const existingScript = await ScriptDb.read(1);
             let scriptId;
             if (existingScript) {
-                await ScriptDb.update(1, { script: value });
+                await ScriptDb.update(1, { script: inputScript });
                 scriptId = existingScript.id;
             } else {
-                scriptId = await ScriptDb.create({ script: value });
+                scriptId = await ScriptDb.create({ script: inputScript });
             }
             res.send({ status: 'success', scriptId });
         } catch (error) {
             res.status(500).send({ status: 'error', message: error.message });
         }
     });
-
-
+    /**
+     * checks db connection
+     */
     app.get('/api/get/db/status', async (req,res)=>{
         try{
             await ScriptDb.init();
@@ -116,7 +143,10 @@ export default function applyScriptApiEndpoints(app) {
         }
     })
 
-
+    /**
+     * collects all the needed data for modification of the template and starts it
+     *
+     */
     app.get('/api/template/modify', async (req, res) => {
         try {
 
@@ -128,7 +158,7 @@ export default function applyScriptApiEndpoints(app) {
             const template = await getMainTemplate(shopData.myshopify_domain.toString(),  res.locals.shopify.session.accessToken, themeID);
 
             const script = await ScriptDb.read(1);
-            logger.debug(script);
+
             const modifiedTemplate = await modifyTemplateHelper(script.script,template);
 
             const response = await updateTemplate(shopData.myshopify_domain,res.locals.shopify.session.accessToken,themeID,modifiedTemplate);
@@ -140,7 +170,7 @@ export default function applyScriptApiEndpoints(app) {
         }
     });
 
-    // Handle errors
+
     app.use((err, req, res, next) => {
         console.error(err.stack);
         res.status(500).send({ status: 'error', message: err.message });
