@@ -46,6 +46,7 @@ export async function modifyTemplateHelper(script, template) {
             if (headIndex === -1) {
                 // If the opening head tag is not found, append the new script to the end of the body
                 updatedTemplate = template.replace('</body>','\n'+decodedScript+'\n');
+                logger.error("The template dosnt have a head.")
             } else {
                 // If the opening head tag is found, insert the new script immediately after it
                 updatedTemplate = template.substring(0, headIndex + 6) + '\n'+decodedScript+'\n' + template.substring(headIndex + 6);
