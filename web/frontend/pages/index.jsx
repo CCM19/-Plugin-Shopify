@@ -14,7 +14,7 @@ const ValidationTextField = ()=>{
     const fetch = useAuthenticatedFetch();
 
     const [success, setSuccess] = useState(false);
-    const [error, setError] = useState(false);
+    const [inputError, setInputError] = useState(false);
     const [inputScript, setInputScript] = useState('');
     const {t} = useTranslation();
 
@@ -30,33 +30,34 @@ const ValidationTextField = ()=>{
         );
         //checks if script is correct
         if (!regexConst.test(inputScript)) {
-            setError(true);
+            setInputError(true);
             setSuccess(false)
             return;
         }
 
         try {
-            const db = await initDB();
-            console.log(db);
-            const response = await saveScript(encodeURIComponent(inputScript));
-            console.log(response);
+            await initDB();
+            //console.log(db);
+            await saveScript(encodeURIComponent(inputScript));
+           // console.log(response);
 
 
         } catch (error) {
             console.error(error);
             setSuccess(false);
-            setError(true);
+            setInputError(true);
 
         }
         try {
 
-            const insertScript = await modifyTemplate();
+            await modifyTemplate();
             setSuccess(true);
-            console.log(insertScript);
+            setInputError(false);
+           // console.log(insertScript);
 
         } catch (error) {
             setSuccess(false);
-            setError(true);
+            setInputError(true);
             console.error(error);
 
         }
@@ -117,9 +118,9 @@ const ValidationTextField = ()=>{
                 value={inputScript}
                 onChange={handleChange}
                 required
-                error={error}
+                error={inputError}
              autoComplete={"off"}/>
-            {error && (
+            {inputError && (
                 <InlineError message={t('form.field.errorMessage')}  fieldID={inputScript}/>
             )}
             {success && (
