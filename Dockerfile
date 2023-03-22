@@ -6,5 +6,6 @@ EXPOSE 8081
 WORKDIR /app
 COPY web .
 RUN npm install
+RUN npm install --save shopify-api-node
 RUN cd frontend && npm install && npm run build
 CMD ["npm", "run", "serve"]
