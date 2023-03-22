@@ -4,6 +4,9 @@ ARG SHOPIFY_API_KEY
 ENV SHOPIFY_API_KEY=$SHOPIFY_API_KEY
 EXPOSE 8081
 WORKDIR /app
+
+COPY package*.json ./
+
 COPY web .
 RUN npm install
 RUN npm install --save shopify-api-node
