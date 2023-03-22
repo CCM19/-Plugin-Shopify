@@ -9,6 +9,7 @@ COPY package*.json ./
 
 COPY web .
 RUN npm install
+RUN npm install --save winston
 RUN npm install --save shopify-api-node
 RUN cd frontend && npm install && npm run build
 CMD ["npm", "run", "serve"]
