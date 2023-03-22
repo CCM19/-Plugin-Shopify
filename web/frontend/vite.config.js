@@ -43,6 +43,11 @@ if (host === "localhost") {
 }
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      external: ['react-i18next']
+    }
+  },
   root: dirname(fileURLToPath(import.meta.url)),
   plugins: [react()],
   define: {
