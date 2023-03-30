@@ -17,6 +17,16 @@ const STATIC_PATH =
 
 const app = express();
 
+//CSP handle
+app.use((req, res, next) => {
+  const shopUrl = req.query.shop;
+  if (shopUrl) {
+    const csp = `frame-ancestors ${shopUrl} admin.shopify.com`;
+    res.setHeader("Content-Security-Policy", csp);
+  }
+  next();
+});
+
 // Set up Shopify authentication and webhook handling
 app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
