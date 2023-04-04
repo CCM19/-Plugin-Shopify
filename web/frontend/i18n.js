@@ -39,6 +39,10 @@ i18n.use(initReactI18next).init({
     resources,
     lng: 'de',
     fallbackLng: 'en',
+    debug: true,
+}, (err,t)=> {
+    if(err) return console.log("error while loading translation",err);
+    t('key');
 });
 
 export default i18n;
