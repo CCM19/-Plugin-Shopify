@@ -17,6 +17,11 @@ const STATIC_PATH =
 
 const app = express();
 
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://*.myshopify.com;");
+  next();
+});
+
 //CSP handle
 app.use((req, res, next) => {
   const shopUrl = req.query.shop;
