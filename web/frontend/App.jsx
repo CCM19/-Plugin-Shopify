@@ -7,7 +7,7 @@ import {
   QueryProvider,
   PolarisProvider,
 } from "./components";
-import {I18nextProvider} from "react-i18next";
+import {I18nextProvider} from "react-i18next/dist/es";
 import i18n from "./i18n.js";
 export default function App() {
   // Any .tsx or .jsx files in /pages will become a route
