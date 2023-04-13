@@ -23,33 +23,41 @@ export const logger = winston.createLogger({
 });
 
 /**
- * writes the encoded script int the beginning of the <head> if a head is available. If their is no head it writes it into the end of the body.
+ * writes the encoded script in the beginning of the <head> if a head is available. If there is non it writes it into the end of the body.
  *
  * @param script
  * @param template
  * @returns {Promise<string|*>}
  */
 export function modifyTemplateHelper(script, template) {
+
+  const pattern = /<script\s+src="(https?:\/\/[^\/]+\/public\/(ccm19|app)\.js\?[^"]+)"\s+referrerpolicy="origin">\s*<\/script>/i;
+
   try {
-    // Define the regex pattern to look for the existing script tag
-    const pattern = /<script\s+src="(https?:\/\/[^\/]+\/public\/(ccm19|app)\.js\?[^"]+)"\s+referrerpolicy="origin">\s*<\/script>/i;
-    const existingScriptMatch = template.match(pattern);
-    const decodedScript = decodeURI(script);
 
     let updatedTemplate;
-    if (existingScriptMatch) {
+
+    if (template.match(pattern)) {
+
       // If the existing script tag is found, replace it with the new script
-      updatedTemplate = template.replace(pattern, `\n${decodedScript}\n`);
+      updatedTemplate = template.replace(pattern, `\n${script}\n`);
+      logger.warn("Replaced current version");
+
     } else {
+
       // If no existing script tag is found, insert the new script after the opening head tag
       const headIndex = template.indexOf('<head>');
+
       if (headIndex === -1) {
+
         // If the opening head tag is not found, append the new script to the end of the body
-        updatedTemplate = template.replace('</body>', `\n${decodedScript}\n`);
-        logger.error('The template dosnt have a head.');
+        updatedTemplate = template.replace('</body>', `\n${script}\n`);
+        logger.warn('No Head found in Template');
+
       } else {
+
         // If the opening head tag is found, insert the new script immediately after it
-        updatedTemplate = `${template.substring(0, headIndex + 6)}\n${decodedScript}\n${template.substring(headIndex + 6)}`;
+        updatedTemplate = `${template.substring(0, headIndex + 6)}\n${script}\n${template.substring(headIndex + 6)}`;
       }
     }
 
