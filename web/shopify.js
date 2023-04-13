@@ -6,9 +6,6 @@ import {join} from "path"
 import {ScriptDb} from "./ccm19-script-db.js";
 const dbFile = join(process.cwd(), "database.sqlite");
 const sessionDb = new SQLiteSessionStorage(dbFile);
-// Initialize SQLite DB
-ScriptDb.db = sessionDb.db;
-ScriptDb.init()
 
 const shopify = shopifyApp({
   api: {
