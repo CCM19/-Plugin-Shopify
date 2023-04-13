@@ -15,40 +15,28 @@ const ValidationTextField = () => {
 
   const [success, setSuccess] = useState(false);
   const [inputError, setInputError] = useState(false);
+  const [inputEmpty, setInputEmpty] = useState(false);
+  const [internalError, setInternalError] = useState(false)
   const [inputScript, setInputScript] = useState('');
+
   const {t} = useTranslation();
 
   const handleChange = (newValue) => setInputScript(newValue);
 
-  /**
-   * Initialises the Db if not already done
-   *
-   * @returns {Promise<Response<any, Record<string, any>, number>>}
-   */
-  const initDB = async () => {
-    const response = await fetch('/api/get/db/status', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return response;
+  const updateState = (inputEmpty, success, inputError,internalError) => {
+    setInputEmpty(inputEmpty);
+    setSuccess(success);
+    setInputError(inputError);
   };
 
-  /**
-   * saves the script
-   *
-   * @param inputScript
-   * @returns {Promise<Response<any, Record<string, any>, number>>}
-   */
-  const saveScript = async (inputScript) => {
-    const response = await fetch('/api/script/save', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({inputScript}),
-    });
-    return response;
-  };
+const setScript = async(inputScript) =>{
+  const response = await fetch ('/api/script/set', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({inputScript}),
+  });
+  return response;
+};
 
   /**
    * starts the process of template modification
@@ -71,31 +59,29 @@ const ValidationTextField = () => {
     const pattern = '<script\\s+src="(https?://[^/]+/public/(ccm19|app)\\.js\\?[^"]+)"\\s+referrerpolicy="origin">\\s*</script>';
     const regexConst = new RegExp(pattern);
 
+    if( inputScript.trim()===""){
+      updateState(true,false,false,false)
+      return
+    }
     // checks if script is correct
     if (!regexConst.test(inputScript)) {
-      setInputError(true);
-      setSuccess(false);
+     updateState(false,false,true,false)
       return;
     }
 
     try {
-      await initDB();
-      // console.log(db);
-      await saveScript(encodeURIComponent(inputScript));
-      // console.log(response);
+      await setScript(encodeURIComponent(inputScript));
+
     } catch (error) {
-      console.error(error);
-      setSuccess(false);
-      setInputError(true);
+    updateState(false,false,false,true)
+      console.error(error)
     }
     try {
       await modifyTemplate();
-      setSuccess(true);
-      setInputError(false);
-      // console.log(insertScript);
+      updateState(false,true,false,false)
+
     } catch (error) {
-      setSuccess(false);
-      setInputError(true);
+      updateState(false,false,false,true)
       console.error(error);
     }
   }, [inputScript]);
@@ -116,6 +102,14 @@ const ValidationTextField = () => {
       {inputError && (
       <InlineError message={t('form.field.errorMessage')} fieldID={inputScript} />
             )}
+      {internalError&& (
+          <InlineError message={t('form.field.internalErrorMessage')} fieldID={inputScript} />
+      )}
+      {inputEmpty && (
+          <div style={{color: 'orange'}}>
+            {t('form.field.emptyInputMessage')}
+          </div>
+      )}
       {success && (
       <div style={{color: 'green'}}>
         {t('form.field.successMessage')}
