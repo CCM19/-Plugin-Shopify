@@ -32,11 +32,9 @@ export const logger = winston.createLogger({
 export function modifyTemplateHelper(script, template) {
 
   const pattern = /<script\s+src="(https?:\/\/[^\/]+\/public\/(ccm19|app)\.js\?[^"]+)"\s+referrerpolicy="origin">\s*<\/script>/i;
-
   try {
 
     let updatedTemplate;
-
     if (template.match(pattern)) {
 
       // If the existing script tag is found, replace it with the new script
@@ -55,7 +53,6 @@ export function modifyTemplateHelper(script, template) {
         logger.warn('No Head found in Template');
 
       } else {
-
         // If the opening head tag is found, insert the new script immediately after it
         updatedTemplate = `${template.substring(0, headIndex + 6)}\n${script}\n${template.substring(headIndex + 6)}`;
       }

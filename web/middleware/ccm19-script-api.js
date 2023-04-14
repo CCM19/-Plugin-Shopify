@@ -111,7 +111,7 @@ export default function applyScriptApiEndpoints(app) {
 
   app.post('/api/script/set', async (req, res) => {
     try {
-      script = await req.body;
+      script =decodeURIComponent( await req.body.inputScript);
       res.send({status: 'success', script});
     } catch (error) {
       res.status(500).send({status: 'error', message: error.message});
@@ -130,7 +130,7 @@ export default function applyScriptApiEndpoints(app) {
 
       const template = await getMainTemplate(shopData.myshopify_domain.toString(), res.locals.shopify.session.accessToken, themeID);
 
-      const modifiedTemplate = await modifyTemplateHelper(decodeURI(script), template);
+      const modifiedTemplate = await modifyTemplateHelper(script, template);
 
       const response = await putTemplate(shopData.myshopify_domain, res.locals.shopify.session.accessToken, themeID, modifiedTemplate);
 
