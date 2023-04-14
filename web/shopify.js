@@ -3,7 +3,6 @@ import { shopifyApp } from "@shopify/shopify-app-express";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
 import { restResources } from "@shopify/shopify-api/rest/admin/2023-01";
 import {join} from "path"
-import {ScriptDb} from "./ccm19-script-db.js";
 const dbFile = join(process.cwd(), "database.sqlite");
 const sessionDb = new SQLiteSessionStorage(dbFile);
 
