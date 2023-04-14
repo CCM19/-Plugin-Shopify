@@ -27,6 +27,7 @@ const ValidationTextField = () => {
     setInputEmpty(inputEmpty);
     setSuccess(success);
     setInputError(inputError);
+    setInternalError(internalError);
   };
 
 const setScript = async(inputScript) =>{
