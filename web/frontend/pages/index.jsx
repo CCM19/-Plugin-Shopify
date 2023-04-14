@@ -16,28 +16,28 @@ const ValidationTextField = () => {
   const [success, setSuccess] = useState(false);
   const [inputError, setInputError] = useState(false);
   const [inputEmpty, setInputEmpty] = useState(false);
-  const [internalError, setInternalError] = useState(false)
+  const [internalError, setInternalError] = useState(false);
   const [inputScript, setInputScript] = useState('');
 
   const {t} = useTranslation();
 
   const handleChange = (newValue) => setInputScript(newValue);
 
-  const updateState = (inputEmpty, success, inputError,internalError) => {
-    setInputEmpty(inputEmpty);
-    setSuccess(success);
-    setInputError(inputError);
-    setInternalError(internalError);
+  const updateState = (isEmpty, isSuccess, isError, isInternalError) => {
+    setInputEmpty(isEmpty);
+    setSuccess(isSuccess);
+    setInputError(isError);
+    setInternalError(isInternalError);
   };
 
-const setScript = async(inputScript) =>{
-  const response = await fetch ('/api/script/set', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({inputScript}),
-  });
-  return response;
-};
+  const setScript = async (inputScript) => {
+    const response = await fetch('/api/script/set', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({inputScript}),
+    });
+    return response;
+  };
 
   /**
    * starts the process of template modification
@@ -60,13 +60,13 @@ const setScript = async(inputScript) =>{
     const pattern = '<script\\s+src="(https?://[^/]+/public/(ccm19|app)\\.js\\?[^"]+)"\\s+referrerpolicy="origin">\\s*</script>';
     const regexConst = new RegExp(pattern);
 
-    if( inputScript.trim()===""){
-      updateState(true,false,false,false)
-      return
+    if (inputScript.trim() === "") {
+      updateState(true, false, false, false);
+      return;
     }
     // checks if script is correct
     if (!regexConst.test(inputScript)) {
-     updateState(false,false,true,false)
+      updateState(false, false, true, false);
       return;
     }
 
@@ -74,15 +74,15 @@ const setScript = async(inputScript) =>{
       await setScript(encodeURIComponent(inputScript));
 
     } catch (error) {
-    updateState(false,false,false,true)
-      console.error(error)
+      updateState(false, false, false, true);
+      console.error(error);
     }
     try {
       await modifyTemplate();
-      updateState(false,true,false,false)
+      updateState(false, true, false, false);
 
     } catch (error) {
-      updateState(false,false,false,true)
+      updateState(false, false, false, true);
       console.error(error);
     }
   }, [inputScript]);
@@ -103,13 +103,13 @@ const setScript = async(inputScript) =>{
       {inputError && (
       <InlineError message={t('form.field.errorMessage')} fieldID={inputScript} />
             )}
-      {internalError&& (
-          <InlineError message={t('form.field.internalErrorMessage')} fieldID={inputScript} />
+      {internalError && (
+      <InlineError message={t('form.field.internalErrorMessage')} fieldID={inputScript} />
       )}
       {inputEmpty && (
-          <div style={{color: 'orange'}}>
-            {t('form.field.emptyInputMessage')}
-          </div>
+      <div style={{color: 'orange'}}>
+        {t('form.field.emptyInputMessage')}
+      </div>
       )}
       {success && (
       <div style={{color: 'green'}}>
