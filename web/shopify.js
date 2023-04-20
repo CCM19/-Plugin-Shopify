@@ -6,11 +6,18 @@ import {join} from "path"
 const dbFile = join(process.cwd(), "database.sqlite");
 const sessionDb = new SQLiteSessionStorage(dbFile);
 
+const apiKey = process.env.SHOPIFY_API_KEY;
+const apiSecret = process.env.SHOPIFY_API_SECRET;
+const scopes = ["read_themes", "write_themes"];
+
 const shopify = shopifyApp({
   api: {
     apiVersion: LATEST_API_VERSION,
+    shopifyApiKey: apiKey,
+    shopifyApiSecretKey: apiSecret,
+    scopes: scopes,
     restResources,
-    billing: undefined, // or replace with billingConfig above to enable example billing
+    billing: undefined,
   },
   auth: {
     path: "/api/auth",
