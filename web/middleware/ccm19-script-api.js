@@ -5,6 +5,8 @@ import fetch from "node-fetch";
 import Shopify from "shopify-api-node";
 
 import {logger, modifyTemplateHelper} from "../helpers/script-helper.js";
+import {createApp} from "@shopify/app-bridge";
+import {getSessionToken} from "@shopify/app-bridge-utils";
 
 let script;
 
@@ -144,5 +146,23 @@ export default function applyScriptApiEndpoints(app) {
   app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send({status: 'error', message: err.message});
+  });
+
+  app.use(async (req,res,next)=>{
+
+    const shop = req.query.shop;
+
+    const app = createApp({
+      apiKey: process.env.SHOPIFY_API_KEY,
+      shopOrigin: `https://${shop}`,
+      forceRedirect: true,
+    });
+
+    const session = await getSessionToken;
+
+    req.app=app;
+    req.session=session;
+
+    next();
   });
 }
