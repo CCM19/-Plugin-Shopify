@@ -12,7 +12,7 @@ let script;
 
 /**
  * Fetches the ID of the Main theme of the store via the shopify api
- * @param shop  shopUtl
+ * @param shop  shopUrl
  * @param accessToken OAuth generated token
  * @returns {Promise<*>}
  */
@@ -125,6 +125,7 @@ export default function applyScriptApiEndpoints(app) {
      *
      */
   app.get('/api/template/modify', async (req, res) => {
+    logger.debug(res.locals.shopify.session.accessToken)
     try {
       const shopData = await getShopData(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
 
