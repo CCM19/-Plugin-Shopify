@@ -19,7 +19,6 @@ use Shopify\Utils;
 |
 */
 try {
-    //todo test session understand
     $requestHeaders = apache_request_headers();
     $requestCookies = null;
     $this->test_session = Utils::loadCurrentSession(
@@ -33,7 +32,6 @@ try {
 try {
     $script_tag = new ScriptTag($this->test_session);
     $script_tag->event = "onload";
-    //todo fill script tag
     $script_tag->src = "http://localhost/public/app.js?apiKey=e1275c253232558891b0b6e4cabe6d3086027709893610fe&amp;domain=757859f";
     $script_tag->save(
         true // Update Object
