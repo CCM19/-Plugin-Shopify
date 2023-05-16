@@ -31,7 +31,6 @@ async function getMainThemeID(shop, accessToken) {
     return error;
   }
 }
-
 /**
  * Fetches  the main template liquid for further manipulation
  *
@@ -101,15 +100,7 @@ export default function applyScriptApiEndpoints(app) {
   app.use(express.json());
   app.use(bodyParser.json());
 
-  const getShopData = async (shop, accessToken) => {
-    const shopify = new Shopify({
-      shopName: shop,
-      accessToken,
-      apiVersion: '2023-01',
-    });
-    const responseShop = await shopify.shop.get();
-    return responseShop;
-  };
+
 
   app.post('/api/script/set', async (req, res) => {
     try {
@@ -125,17 +116,14 @@ export default function applyScriptApiEndpoints(app) {
      *
      */
   app.get('/api/template/modify', async (req, res) => {
-    logger.debug(res.locals.shopify.session.accessToken)
     try {
-      const shopData = await getShopData(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
+      const themeID = await getMainThemeID(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
 
-      const themeID = await getMainThemeID(shopData.myshopify_domain, res.locals.shopify.session.accessToken);
-
-      const template = await getMainTemplate(shopData.myshopify_domain.toString(), res.locals.shopify.session.accessToken, themeID);
+      const template = await getMainTemplate(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken, themeID);
 
       const modifiedTemplate = await modifyTemplateHelper(script, template);
 
-      const response = await putTemplate(shopData.myshopify_domain, res.locals.shopify.session.accessToken, themeID, modifiedTemplate);
+      const response = await putTemplate(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken, themeID, modifiedTemplate);
 
       res.send({status: 'success', response});
     } catch (error) {
@@ -149,21 +137,4 @@ export default function applyScriptApiEndpoints(app) {
     res.status(500).send({status: 'error', message: err.message});
   });
 
-  app.use(async (req,res,next)=>{
-
-    const shop = req.query.shop;
-
-    const app = createApp({
-      apiKey: process.env.SHOPIFY_API_KEY,
-      shopOrigin: `https://${shop}`,
-      forceRedirect: true,
-    });
-
-    const session = await getSessionToken;
-
-    req.app=app;
-    req.session=session;
-
-    next();
-  });
 }
