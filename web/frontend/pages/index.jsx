@@ -1,8 +1,8 @@
 import React, {useCallback, useState} from 'react';
 import {Button, Card, Form, InlineError, Link, TextContainer, TextField, TextStyle} from '@shopify/polaris';
-import {useTranslation} from 'react-i18next/dist/es';
 
 import {useAuthenticatedFetch} from '../hooks';
+import {useTranslation} from "react-i18next";
 
 /**
  * Core component for the handling of the input processing of it.

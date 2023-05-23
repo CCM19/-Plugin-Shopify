@@ -1,15 +1,10 @@
 import express from "express";
 import bodyParser from "body-parser";
 import "@shopify/shopify-api/adapters/node";
-import fetch from "node-fetch";
-import Shopify from "shopify-api-node";
 
 import {logger, modifyTemplateHelper} from "../helpers/script-helper.js";
-import {createApp} from "@shopify/app-bridge";
-import {getSessionToken} from "@shopify/app-bridge-utils";
 
 let script;
-
 /**
  * Fetches the ID of the Main theme of the store via the shopify api
  * @param shop  shopUrl
@@ -132,9 +127,5 @@ export default function applyScriptApiEndpoints(app) {
     }
   });
 
-  app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send({status: 'error', message: err.message});
-  });
 
 }
