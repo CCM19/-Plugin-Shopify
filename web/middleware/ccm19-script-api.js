@@ -2,7 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import "@shopify/shopify-api/adapters/node";
 
-import {logger, modifyTemplateHelper} from "../helpers/script-helper.js";
+import {deleteScript, logger, modifyTemplateHelper} from "../helpers/script-helper.js";
 
 let script;
 /**
@@ -48,21 +48,39 @@ async function getMainTemplate(shop, accessToken, themeID) {
     const responseData = await response.json();
     return responseData.asset && responseData.asset.value;
   } catch (error) {
+    logger.warn("error in getMainTemplate")
     logger.error(error);
     return error;
   }
 }
 
 /**
+ *  gets the current main template
+ * @param shop
+ * @param accessToken
+ * @returns {Promise<*>}
+ */
+async function getTemplate(shop,accessToken){
+  try {
+    return await getMainTemplate(shop, accessToken,await getMainThemeID(shop, accessToken));
+  }catch (error) {
+    logger.error("error in get template")
+    logger.error(error)
+    return error;
+  }
+}
+/**
  *  sends the updated template to the shopify api
  *
  * @param shop
  * @param accessToken
- * @param themeID
  * @param updatedTemplate
  * @returns {Promise<any>}
  */
-async function putTemplate(shop, accessToken, themeID, updatedTemplate) {
+async function putTemplate(shop, accessToken, updatedTemplate) {
+
+  const themeID =await  getMainThemeID(shop,accessToken)
+
   try {
     const assetKey = 'layout/theme.liquid';
     const response = await fetch(`https://${shop}/admin/api/2023-01/themes/${themeID}/assets.json`, {
@@ -96,7 +114,9 @@ export default function applyScriptApiEndpoints(app) {
   app.use(bodyParser.json());
 
 
-
+  /**
+   * sets the script for global use
+   */
   app.post('/api/script/set', async (req, res) => {
     try {
       script =decodeURIComponent( await req.body.inputScript);
@@ -107,19 +127,42 @@ export default function applyScriptApiEndpoints(app) {
   });
 
   /**
-     * collects all the needed data for modification of the template and starts it
+   * endpoint to remove the script from the template
+   */
+  app.get('/api/template/delete',async (req,res) =>{
+    try{
+      const shop = res.locals.shopify.session.shop;
+
+      const template = await getTemplate(shop,res.locals.shopify.session.accessToken);
+
+      const modifiedTemplate = await deleteScript(template);
+
+      const response = await putTemplate(shop, res.locals.shopify.session.accessToken, modifiedTemplate);
+
+      logger.warn(`Removed Script of ${shop}`);
+
+      res.send({status: 'success', response});
+    }catch (error) {
+      logger.error(error);
+      res.status(500).send({status: 'error', message: error.message});
+    }
+  });
+
+  /**
+     * modifies the template with the script
      *
      */
   app.get('/api/template/modify', async (req, res) => {
     try {
-      const themeID = await getMainThemeID(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
+      const shop = res.locals.shopify.session.shop;
 
-      const template = await getMainTemplate(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken, themeID);
+      const template = await getTemplate(shop,res.locals.shopify.session.accessToken)
 
       const modifiedTemplate = await modifyTemplateHelper(script, template);
 
-      const response = await putTemplate(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken, themeID, modifiedTemplate);
+      const response = await putTemplate(shop, res.locals.shopify.session.accessToken, modifiedTemplate);
 
+      logger.warn(`modified Template of ${shop}`);
       res.send({status: 'success', response});
     } catch (error) {
       logger.error(error);

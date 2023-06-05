@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Button, Card, Form, InlineError, Link, TextContainer, TextField, TextStyle} from '@shopify/polaris';
 
 import {useAuthenticatedFetch} from '../hooks';
@@ -18,18 +18,25 @@ const ValidationTextField = () => {
   const [inputEmpty, setInputEmpty] = useState(false);
   const [internalError, setInternalError] = useState(false);
   const [inputScript, setInputScript] = useState('');
+  const [deleteClicked,setDeleteClicked] = useState(false);
 
   const {t} = useTranslation();
 
   const handleChange = (newValue) => setInputScript(newValue);
 
-  const updateState = (isEmpty, isSuccess, isError, isInternalError) => {
+  const updateState = (isEmpty, isSuccess, isError, isInternalError, isDeleteClicked) => {
     setInputEmpty(isEmpty);
     setSuccess(isSuccess);
     setInputError(isError);
     setInternalError(isInternalError);
+    setDeleteClicked(isDeleteClicked);
   };
 
+  /**
+   * saves the script for backend use
+   * @param inputScript
+   * @returns {Promise<Response<any, Record<string, any>, number>>}
+   */
   const setScript = async (inputScript) => {
     const response = await fetch('/api/script/set', {
       method: 'POST',
@@ -40,19 +47,44 @@ const ValidationTextField = () => {
   };
 
   /**
-   * starts the process of template modification
+   * starts the process of adding the script to the template
    *
    * @returns {Promise<Response<any, Record<string, any>, number>>}
    */
   const modifyTemplate = async () => {
-    const response = await fetch('/api/template/modify', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return response;
+   try {
+     return await fetch('/api/template/modify', {
+       method: 'GET',
+       headers: {
+         'Content-Type': 'application/json',
+       },
+     });
+   }catch(error){
+     updateState(false,false,false,true,false)
+     console.error(error)
+     return error;
+   }
+
   };
+  /**
+   * starts the process of deleteation of the scripüt
+   * @returns {Promise<Response|*>}
+   */
+  const handleDelete = async () => {
+    try{
+      updateState(false,false,false,false,true)
+      return await fetch('/api/template/delete', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }catch (error) {
+      updateState(false,false,false,true,false)
+      console.error(error);
+      return error;
+    }
+  }
 
   const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
@@ -61,29 +93,35 @@ const ValidationTextField = () => {
     const regexConst = new RegExp(pattern);
 
     if (inputScript.trim() === "") {
-      updateState(true, false, false, false);
+     await updateState(true, false, false, false,false);
       return;
     }
     // checks if script is correct
     if (!regexConst.test(inputScript)) {
-      updateState(false, false, true, false);
+      updateState(false, false, true, false,false);
       return;
     }
 
     try {
+
       await setScript(encodeURIComponent(inputScript));
 
     } catch (error) {
-      updateState(false, false, false, true);
+
+      updateState(false, false, false, true,false);
       console.error(error);
+
     }
     try {
+
       await modifyTemplate();
-      updateState(false, true, false, false);
+      updateState(false, true, false, false,false);
 
     } catch (error) {
-      updateState(false, false, false, true);
+
+      updateState(false, false, false, true,false);
       console.error(error);
+
     }
   }, [inputScript]);
 
@@ -116,8 +154,16 @@ const ValidationTextField = () => {
         {t('form.field.successMessage')}
       </div>
             )}
+      {deleteClicked && (
+          <div style={{color: 'green'}}>
+            {t('form.field.deleteMessage')}
+          </div>
+      )}
 
-      <Button submit>{t('form.field.button')}</Button>
+      <Button  primary={true} submit>{t('form.field.button')} </Button>
+
+      <Button destructive={true} onClick={handleDelete}>{t('form.field.delete')}</Button>
+
     </Form>
   );
 };

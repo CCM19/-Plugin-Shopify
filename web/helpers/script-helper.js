@@ -5,9 +5,9 @@ import winston from 'winston';
 export const logger = winston.createLogger({
   level: 'debug',
   format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.prettyPrint(),
-    winston.format.json(),
+      winston.format.timestamp(),
+      winston.format.prettyPrint(),
+      winston.format.json()
   ),
   transports: [
     new winston.transports.File({
@@ -15,12 +15,40 @@ export const logger = winston.createLogger({
     }),
     new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple(),
+          winston.format.colorize(),
+          winston.format.simple()
       ),
     }),
   ],
 });
+
+/**
+ * searches and removes the script in the liquid
+ *
+ * @param template
+ * @returns {template}
+ */
+export function deleteScript(template){
+  const pattern = /<script\s+src="(https?:\/\/[^\/]+\/public\/(ccm19|app)\.js\?[^"]+)"\s+referrerpolicy="origin">\s*<\/script>/i;
+  try{
+    let updatedTemplate;
+
+    if(template.match(pattern)){
+      updatedTemplate=template.replace(pattern,' ');
+      logger.warn("script removed");
+    }else{
+      logger.warn("no script to remove found");
+      return template;
+    }
+      return updatedTemplate;
+
+  }catch (error) {
+    logger.warn("couldnt remove script")
+    logger.error(error);
+    return template;
+  }
+}
+
 
 /**
  * writes the encoded script in the beginning of the <head> if a head is available. If there is non it writes it into the end of the body.
@@ -39,7 +67,7 @@ export function modifyTemplateHelper(script, template) {
 
       // If the existing script tag is found, replace it with the new script
       updatedTemplate = template.replace(pattern, `\n${script}\n`);
-      logger.warn("Replaced current version");
+      logger.warn("Replaced current version of the script");
 
     } else {
 
