@@ -89,7 +89,7 @@ const ValidationTextField = () => {
   const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
 
-    const pattern = '<script\\s+src="(https?://[^/]+/public/(ccm19|app)\\.js\\?[^"]+)"\\s+referrerpolicy="origin">\\s*</script>';
+    const pattern = '<script\\s+src="(https?://(?:[^/]+/public/(?:ccm19|app)\\.js\\?[^"]+|cloud\\.ccm19\\.de/app\\.js\\?[^"]+))"\\s+referrerpolicy="origin">\\s*</script>';
     const regexConst = new RegExp(pattern);
 
     if (inputScript.trim() === "") {
