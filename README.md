@@ -4,7 +4,7 @@ Das CCM19-Integrations-Plugin fügt ohne viel aufwand Ihren CCM19 Code-Schnipsel
 
 ## Installation
 
-Die kostenlose Installation wird über den Shopify store ausgeführt.
+Die Installation erfolgt über den Shopify Store. Eine alternative Installation ist nicht vorgesehen.
 
 ## Anwendung
 
@@ -12,11 +12,7 @@ Einfach Ihren CCM19 Code-Schnipsel aus dem Backend in das Textfeld einfügen und
 
 ## Support
 
-Sollte das Plugin das Script nicht wie gewünscht einfügen kann es an einer fehlerhaften eingabe liegen. Sollte das nicht der Fall sein 
-wenden Sie sich bitte an den Support mit der entsprechenden Fehlernachricht aus der Browserkonsole.
-Gibt es keinen Fehler in 
-der Browserkonsole geben oder ist dieser nicht eindeutig dann schicken Sie bitte die error logs aus ccm19-integration/web/logs/app.log an
-den Support mit einer kurzen Beschreibung des Fehlers.
+Bei Fragen oder Problemen melden Sie sich bitte unter info@papoo.de.
 
 ## FAQ
 
