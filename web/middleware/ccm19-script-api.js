@@ -170,5 +170,37 @@ export default function applyScriptApiEndpoints(app) {
     }
   });
 
+  /**
+   * Mandatory webhook section
+   */
+  app.get('/customers/data_request', async (req, res) => {
+    logger.warn("customer data has been requested")
+    try {
+      res.status(200).send({status:'success'});
+    }catch (e) {
+      logger.error(e)
+      res.status(500).send({status:'error'});
+    }
+  });
+
+  app.get('/customers/redact', async (req, res) => {
+    logger.warn("customer redact has been requested")
+    try {
+      res.status(200).send({status:'success'});
+    }catch (e) {
+      logger.error(e)
+      res.status(500).send({status:'error'});
+    }
+  });
+
+  app.get('/shop/redact', async (req, res) => {
+    logger.warn("shop redact has been requested")
+    try {
+      res.status(200).send({status:'success'});
+    }catch (e) {
+      logger.error(e)
+      res.status(500).send({status:'error'});
+    }
+  });
 
 }
