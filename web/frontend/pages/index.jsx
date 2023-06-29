@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useState} from 'react';
-import {Button, Card, Form, InlineError, Link, TextContainer, TextField, TextStyle} from '@shopify/polaris';
+import React, {useCallback, useState} from 'react';
+import {Button, ButtonGroup, Form, InlineError, Link, Text, TextField, VerticalStack, Card, AlphaCard} from '@shopify/polaris';
 
 import {useAuthenticatedFetch} from '../hooks';
 import {useTranslation} from "react-i18next";
@@ -38,16 +38,15 @@ const ValidationTextField = () => {
    * @returns {Promise<Response<any, Record<string, any>, number>>}
    */
   const setScript = async (inputScript) => {
-    const response = await fetch('/api/script/set', {
+    return await fetch('/api/script/set', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({inputScript}),
     });
-    return response;
   };
 
   /**
-   * starts the process of adding the script to the template
+   * adds script to template
    *
    * @returns {Promise<Response<any, Record<string, any>, number>>}
    */
@@ -67,7 +66,7 @@ const ValidationTextField = () => {
 
   };
   /**
-   * starts the process of deleteation of the scripüt
+   * starts the process of deleting the script
    * @returns {Promise<Response|*>}
    */
   const handleDelete = async () => {
@@ -96,7 +95,7 @@ const ValidationTextField = () => {
      await updateState(true, false, false, false,false);
       return;
     }
-    // checks if script is correct
+
     if (!regexConst.test(inputScript)) {
       updateState(false, false, true, false,false);
       return;
@@ -127,6 +126,7 @@ const ValidationTextField = () => {
 
   return (
     <Form onSubmit={handleSubmit}>
+      <VerticalStack gap="05">
       <TextField
         label={t('form.field.label')}
         placeholder="<script src=http://site/public/app.js?apiKey=1337753522109847&amp;domain=1337  referrerpolicy=origin></script>"
@@ -138,31 +138,26 @@ const ValidationTextField = () => {
         error={inputError}
         autoComplete="off"
       />
-      {inputError && (
-      <InlineError message={t('form.field.errorMessage')} fieldID={inputScript} />
-            )}
-      {internalError && (
-      <InlineError message={t('form.field.internalErrorMessage')} fieldID={inputScript} />
-      )}
-      {inputEmpty && (
-      <div style={{color: 'orange'}}>
-        {t('form.field.emptyInputMessage')}
+      <div className="button-container">
+        <ButtonGroup>
+
+          <Button secondary={true} destructive={true} onClick={handleDelete} >{t('form.field.delete')}</Button>
+
+          <Button  primary={true} submit >{t('form.field.button')} </Button>
+
+        </ButtonGroup>
       </div>
-      )}
-      {success && (
-      <div style={{color: 'green'}}>
-        {t('form.field.successMessage')}
-      </div>
-            )}
-      {deleteClicked && (
-          <div style={{color: 'green'}}>
-            {t('form.field.deleteMessage')}
+      </VerticalStack>
+
+      {inputError || internalError || inputEmpty || success || deleteClicked ? (
+          <div className="message-container" style={{ color: success || deleteClicked ? 'green' : 'orange' }}>
+            {inputError && <InlineError message={t('form.field.errorMessage')} fieldID={inputScript} />}
+            {internalError && <InlineError message={t('form.field.internalErrorMessage')} fieldID={inputScript} />}
+            {inputEmpty && t('form.field.emptyInputMessage')}
+            {success && t('form.field.successMessage')}
+            {deleteClicked && t('form.field.deleteMessage')}
           </div>
-      )}
-
-      <Button  primary={true} submit>{t('form.field.button')} </Button>
-
-      <Button destructive={true} onClick={handleDelete}>{t('form.field.delete')}</Button>
+      ) : null}
 
     </Form>
   );
@@ -186,19 +181,15 @@ export default function Homepage() {
   return (
     <div className="HomePage">
       <Card.Header actions={[headerAction]} title="CCM19 Integration" />
-      <Card.Section>
-        <TextContainer>
-          <TextStyle variation="subdued">
+      <AlphaCard>
+        <VerticalStack gap="5">
+          <Text variant="bodyMd" as="span">
             {linkText}
             <Link url={linkUrl}>{linkUrl}</Link>
-          </TextStyle>
-        </TextContainer>
-      </Card.Section>
-      <Card.Section>
-        <>
+          </Text>
           <ValidationTextField />
-        </>
-      </Card.Section>
+        </VerticalStack>
+      </AlphaCard>
     </div>
   );
 }
