@@ -129,7 +129,7 @@ const ValidationTextField = () => {
       <VerticalStack gap="05">
       <TextField
         label={t('form.field.label')}
-        placeholder="<script src=http://site/public/app.js?apiKey=1337753522109847&amp;domain=1337  referrerpolicy=origin></script>"
+        placeholder='<script src="http://site/public/app.js?apiKey=1337753522109847&amp;domain=1337"  referrerpolicy=origin></script>'
         margin="normal"
         variant="outlined"
         value={inputScript}
