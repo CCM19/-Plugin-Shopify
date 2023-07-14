@@ -18,18 +18,16 @@ const ValidationTextField = () => {
   const [inputEmpty, setInputEmpty] = useState(false);
   const [internalError, setInternalError] = useState(false);
   const [inputScript, setInputScript] = useState('');
-  const [deleteClicked,setDeleteClicked] = useState(false);
 
   const {t} = useTranslation();
 
   const handleChange = (newValue) => setInputScript(newValue);
 
-  const updateState = (isEmpty, isSuccess, isError, isInternalError, isDeleteClicked) => {
+  const updateState = (isEmpty, isSuccess, isError, isInternalError) => {
     setInputEmpty(isEmpty);
     setSuccess(isSuccess);
     setInputError(isError);
     setInternalError(isInternalError);
-    setDeleteClicked(isDeleteClicked);
   };
 
   /**
@@ -59,19 +57,19 @@ const ValidationTextField = () => {
        },
      });
    }catch(error){
-     updateState(false,false,false,true,false)
+     updateState(false,false,false,true)
      console.error(error)
      return error;
    }
 
   };
+
   /**
    * starts the process of deleting the script
    * @returns {Promise<Response|*>}
    */
   const handleDelete = async () => {
     try{
-      updateState(false,false,false,false,true)
       return await fetch('/api/template/delete', {
         method: 'GET',
         headers: {
@@ -79,7 +77,7 @@ const ValidationTextField = () => {
         },
       });
     }catch (error) {
-      updateState(false,false,false,true,false)
+      updateState(false,false,false,true)
       console.error(error);
       return error;
     }
@@ -92,12 +90,19 @@ const ValidationTextField = () => {
     const regexConst = new RegExp(pattern);
 
     if (inputScript.trim() === "") {
-     await updateState(true, false, false, false,false);
+      updateState(true, false, false, false);
+      try {
+        await handleDelete()
+
+      }catch (e) {
+        updateState(false,false,false,true)
+        console.error(e);
+      }
       return;
     }
 
     if (!regexConst.test(inputScript)) {
-      updateState(false, false, true, false,false);
+      updateState(false, false, true, false);
       return;
     }
 
@@ -107,18 +112,18 @@ const ValidationTextField = () => {
 
     } catch (error) {
 
-      updateState(false, false, false, true,false);
+      updateState(false, false, false, true);
       console.error(error);
 
     }
     try {
 
       await modifyTemplate();
-      updateState(false, true, false, false,false);
+      updateState(false, true, false, false);
 
     } catch (error) {
 
-      updateState(false, false, false, true,false);
+      updateState(false, false, false, true);
       console.error(error);
 
     }
@@ -126,7 +131,7 @@ const ValidationTextField = () => {
 
   return (
     <Form onSubmit={handleSubmit}>
-      <VerticalStack gap="05">
+      <VerticalStack gap="2">
       <TextField
         label={t('form.field.label')}
         placeholder='<script src="http://site/public/app.js?apiKey=1337753522109847&amp;domain=1337"  referrerpolicy=origin></script>'
@@ -141,21 +146,18 @@ const ValidationTextField = () => {
       <div className="button-container">
         <ButtonGroup>
 
-          <Button secondary={true} destructive={true} onClick={handleDelete} >{t('form.field.delete')}</Button>
-
           <Button  primary={true} submit >{t('form.field.button')} </Button>
 
         </ButtonGroup>
       </div>
       </VerticalStack>
 
-      {inputError || internalError || inputEmpty || success || deleteClicked ? (
-          <div className="message-container" style={{ color: success || deleteClicked ? 'green' : 'orange' }}>
+      {inputError || internalError || inputEmpty || success  ? (
+          <div className="message-container" style={{ color: success  ? 'green' : 'orange' }}>
             {inputError && <InlineError message={t('form.field.errorMessage')} fieldID={inputScript} />}
             {internalError && <InlineError message={t('form.field.internalErrorMessage')} fieldID={inputScript} />}
             {inputEmpty && t('form.field.emptyInputMessage')}
             {success && t('form.field.successMessage')}
-            {deleteClicked && t('form.field.deleteMessage')}
           </div>
       ) : null}
 
@@ -171,7 +173,6 @@ const ValidationTextField = () => {
 export default function Homepage() {
   const {t} = useTranslation();
   const linkText = t('form.field.homepage');
-  const linkUrl = t('form.field.link');
 
   const headerAction = {
     content: 'CCM19 Support',
@@ -185,7 +186,6 @@ export default function Homepage() {
         <VerticalStack gap="5">
           <Text variant="bodyMd" as="span">
             {linkText}
-            <Link url={linkUrl}>{linkUrl}</Link>
           </Text>
           <ValidationTextField />
         </VerticalStack>
