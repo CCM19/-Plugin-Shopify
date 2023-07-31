@@ -3,9 +3,14 @@ import { shopifyApp } from "@shopify/shopify-app-express";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
 import {join} from "path"
 import {restResources} from "@shopify/shopify-api/rest/admin/2023-04";
+import {ScriptDB} from "./script-db.js";
+import sqlite3 from "sqlite3";
 
-const dbFile = join(process.cwd(), "database.sqlite");
-const sessionDb = new SQLiteSessionStorage(dbFile);
+/*const dbFile = join(process.cwd(), "database.sqlite");
+const sessionDb = new SQLiteSessionStorage(dbFile);*/
+const database = new sqlite3.Database(join(process.cwd(), "database.sqlite"));
+ScriptDB.db =database;
+ScriptDB.init();
 
 const apiKey = process.env.SHOPIFY_API_KEY;
 const apiSecret = process.env.SHOPIFY_API_SECRET;
@@ -27,6 +32,6 @@ const shopify = shopifyApp({
   webhooks: {
     path: "/api/webhooks",
   },
-  sessionStorage: sessionDb,
+  sessionStorage: new SQLiteSessionStorage(database),
 });
 export default shopify;
