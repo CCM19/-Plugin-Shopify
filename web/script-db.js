@@ -12,19 +12,19 @@ export const ScriptDB ={
 
     create: async function({
         shopDomain,
-        script
+        scriptContent
                            }) {
         await this.ready
 
         const query = `
       INSERT INTO ${this.scriptTableName}
-      (shopDomain, script)
+      (shopDomain, scriptContent)
       VALUES (?, ?)
       RETURNING id;
     `;
         const rawResults = await this.__query(query, [
             shopDomain,
-            script,
+            scriptContent,
         ]);
         return rawResults[0].id;
     },
@@ -47,15 +47,26 @@ export const ScriptDB ={
         await this.ready;
 
         const query = `
-      SELECT * FROM ${this.scriptTableName}
-      WHERE shopDomain = ?;
-    `;
+    SELECT * FROM ${this.scriptTableName}
+    WHERE shopDomain = ?;
+  `;
 
         const rows = await this.__query(query, [shopDomain]);
-        if (!Array.isArray(rows) || rows.length !== 1) return undefined;
+      //  console.log('Query result:', rows);
+
+        if (!Array.isArray(rows)) {
+            console.log('rows is not an array');
+        }
+
+        if (!Array.isArray(rows) || rows.length < 1) {
+            console.log('Returning undefined');
+            return undefined;
+        }
 
         return rows[0];
     },
+
+
 
     update: async function (id, { scriptContent }) {
         await this.ready;
@@ -140,4 +151,20 @@ export const ScriptDB ={
             });
         });
     },
+    listAll: async function () {
+        try {
+            await this.ready;
+
+            const query = `
+      SELECT * FROM ${this.scriptTableName};
+    `;
+
+            const results = await this.__query(query);
+
+            return results;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 }
