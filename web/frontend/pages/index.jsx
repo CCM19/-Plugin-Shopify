@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Button, ButtonGroup, Form, InlineError, Link, Text, TextField, VerticalStack, Card, AlphaCard} from '@shopify/polaris';
 
 import {useAuthenticatedFetch} from '../hooks';
@@ -29,7 +29,7 @@ const ValidationTextField = () => {
     setInputError(isError);
     setInternalError(isInternalError);
   };
-
+  
   /**
    * saves the script for backend use
    * @param inputScript
@@ -82,13 +82,36 @@ const ValidationTextField = () => {
       return error;
     }
   }
+  useEffect(() => {
+    const fetchScriptValue = async () => {
+      try {
+        const response = await fetch('/api/script/get', {
+          method: 'GET',
+          headers: {'Content-Type': 'application/json'},
+        });
+
+        const scriptData = await response.json();
+        if (scriptData.script !== undefined) {
+          setInputScript(scriptData.script); // Set the fetched script value
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching script:", error);
+      }
+    };
+
+    fetchScriptValue(); // Fetch the script value when the component mounts
+  }, []);
+
 
   const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
 
+
     const pattern = '<script\\s+src="(https?://(?:[^/]+/public/(?:ccm19|app)\\.js\\?[^"]+|cloud\\.ccm19\\.de/app\\.js\\?[^"]+))"\\s+referrerpolicy="origin">\\s*</script>';
     const regexConst = new RegExp(pattern);
 
+
+    //delete Script if possible and field empty
     if (inputScript.trim() === "") {
       updateState(true, false, false, false);
       try {
@@ -101,31 +124,25 @@ const ValidationTextField = () => {
       return;
     }
 
+    //abort if input is false
     if (!regexConst.test(inputScript)) {
       updateState(false, false, true, false);
       return;
     }
 
     try {
-
       await setScript(encodeURIComponent(inputScript));
-
     } catch (error) {
-
       updateState(false, false, false, true);
       console.error(error);
-
     }
-    try {
 
+    try {
       await modifyTemplate();
       updateState(false, true, false, false);
-
     } catch (error) {
-
       updateState(false, false, false, true);
       console.error(error);
-
     }
   }, [inputScript]);
 
@@ -172,7 +189,6 @@ const ValidationTextField = () => {
  */
 export default function Homepage() {
   const {t} = useTranslation();
-  const linkText = t('form.field.homepage');
 
   const headerAction = {
     content: 'CCM19 Support',
@@ -184,9 +200,6 @@ export default function Homepage() {
       <Card.Header actions={[headerAction]} title="CCM19 Integration" />
       <AlphaCard>
         <VerticalStack gap="5">
-          <Text variant="bodyMd" as="span">
-            {linkText}
-          </Text>
           <ValidationTextField />
         </VerticalStack>
       </AlphaCard>
