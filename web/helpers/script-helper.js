@@ -1,4 +1,5 @@
 import winston from 'winston';
+import {ScriptDB} from "../script-db.js";
 
 // debug and error logger
 
@@ -23,13 +24,93 @@ export const logger = winston.createLogger({
 });
 
 /**
+ *
+ * @param shopDomain
+ * @returns {null|*}
+ */
+export async function fetchScript(shopDomain) {
+  try {
+    await ScriptDB.init();
+
+    const shop = await ScriptDB.readByShopDomain(shopDomain);
+    if (!shop) {
+      logger.error(`No such a shop in DB:${shopDomain} `)
+    }
+    return shop.scriptContent;
+
+  } catch (e) {
+    logger.error("fetchScript error:",e)
+    return null
+  }
+
+
+}
+
+
+export async function createNewEntry(shopDomain, script) {
+  try {
+    // Initialize the ScriptDB if it's not already initialized
+    await ScriptDB.init();
+    const existingEntry = await ScriptDB.readByShopDomain(shopDomain);
+
+    if (!existingEntry || await existingEntry.scriptContent !== script) {
+      // Call the create method to insert a new record
+      const newEntryId = await ScriptDB.create({
+        shopDomain: shopDomain,
+        scriptContent: script,
+      });
+      console.log(`New entry created with ID: ${newEntryId}`);
+
+    } else if (existingEntry && existingEntry.scriptContent !== script) {
+      await ScriptDB.update(existingEntry.id, { scriptContent: script });
+      console.log(`Entry has been updated for shop: ${shopDomain}`);
+    }
+  } catch (error) {
+    console.error('Error occurred while create entry:', error);
+  }
+}
+
+/**
+ *
+ * @param shopDomain
+ * @returns {RegExp}
+ */
+async function fetchPattern(shopDomain) {
+  const fetcher = await fetchScript(shopDomain);
+  const script = await stripScript(fetcher);
+
+  const decodedScript = decodeURIComponent(script);
+
+  const regexPattern = `<script\\s+src=["']${decodedScript.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']\\s*(?:\\s+\\S+="[^"]*")*\\s*>\\s*</script>`;
+  return new RegExp(regexPattern);
+}
+
+
+
+/**
+ *
+ * @param script
+ * @returns {null|*}
+ */
+export async function stripScript(script) {
+  const syncedScript = await script;
+  const matches = syncedScript.match(/\bsrc=([\'"])((?:[^"\'?#]|(?!\1)[\"\'])*\/(?:ccm19|app)\.js\?(?:[^"\']|(?!\1).)*?)\1/i);
+  if (matches && matches[2]) {
+    return matches[2];
+  }else{
+    return null;
+  }
+}
+/**
  * searches and removes the script in the liquid
  *
  * @param template
+ * @param shopDomain
  * @returns {template}
  */
-export function deleteScript(template){
-  const pattern = '<script\\s+src="(https?://(?:[^/]+/public/(?:ccm19|app)\\.js\\?[^"]+|cloud\\.ccm19\\.de/app\\.js\\?[^"]+))"\\s+referrerpolicy="origin">\\s*</script>';
+export async function deleteScript(template, shopDomain){
+
+  const pattern = await fetchPattern(shopDomain)
   try{
     let updatedTemplate;
 
@@ -43,27 +124,27 @@ export function deleteScript(template){
       return updatedTemplate;
 
   }catch (error) {
-    logger.warn("couldnt remove script")
-    logger.error(error);
+    logger.error("error in deletescript",error);
     return template;
   }
 }
-
 
 /**
  * writes the encoded script in the beginning of the <head> if a head is available. If there is non it writes it into the end of the body.
  *
  * @param script
  * @param template
+ * @param shopDomain
  * @returns {Promise<string|*>}
  */
-export function modifyTemplateHelper(script, template) {
+export async function modifyTemplateHelper(script, template, shopDomain) {
 
-  const pattern = '<script\\s+src="(https?://(?:[^/]+/public/(?:ccm19|app)\\.js\\?[^"]+|cloud\\.ccm19\\.de/app\\.js\\?[^"]+))"\\s+referrerpolicy="origin">\\s*</script>';
+  const pattern = await fetchPattern(shopDomain)
+
   try {
 
     let updatedTemplate;
-    if (template.match(pattern)) {
+    if (pattern.test(template)) {
 
       // If the existing script tag is found, replace it with the new script
       updatedTemplate = template.replace(pattern, `\n${script}\n`);
@@ -88,7 +169,28 @@ export function modifyTemplateHelper(script, template) {
 
     return updatedTemplate;
   } catch (error) {
-    logger.error(error);
+    logger.error("error in modifyTemplateHelper",error);
     return template;
   }
 }
+
+/*
+//Db debug stuff
+async function listAllEntries() {
+  try {
+    await ScriptDB.init();
+
+    // Call the list method without specifying a shopDomain to retrieve all entries
+    const entries = await ScriptDB.listAll();
+
+    if (entries.length === 0) {
+      console.log('No entries found in the database.');
+    } else {
+      logger.debug('All entries in the database:');
+      logger.debug(entries);
+    }
+  } catch (error) {
+    console.error('Error occurred:', error);
+    // Handle the error appropriately
+  }
+}*/
