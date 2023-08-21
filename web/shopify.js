@@ -6,11 +6,10 @@ import {restResources} from "@shopify/shopify-api/rest/admin/2023-04";
 import {ScriptDB} from "./script-db.js";
 import sqlite3 from "sqlite3";
 
-/*const dbFile = join(process.cwd(), "database.sqlite");
-const sessionDb = new SQLiteSessionStorage(dbFile);*/
-const database = new sqlite3.Database(join(process.cwd(), "database.sqlite"));
+//const sessionDb = new SQLiteSessionStorage(dbFile);
+const database = new sqlite3.Database(join(process.cwd(), "script_db.sqlite"));
 ScriptDB.db =database;
-ScriptDB.init();
+await ScriptDB.init();
 
 const apiKey = process.env.SHOPIFY_API_KEY;
 const apiSecret = process.env.SHOPIFY_API_SECRET;
