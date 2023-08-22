@@ -1,43 +1,39 @@
 import sqlite3 from "sqlite3";
 import path from "path";
-import shopify from "./shopify.js";
 
 const DEFAULT_DB_FILE = path.join(process.cwd(), "script_db.sqlite");
 
-export const ScriptDB ={
+export const ScriptDB = {
     scriptTableName: "script",
     db: null,
     ready: null,
 
-
-    create: async function({
-        shopDomain,
-        scriptContent
-                           }) {
-        await this.ready
+    create: async function({shopDomain, scriptContent})
+    {
+        await this.ready;
 
         const query = `
-      INSERT INTO ${this.scriptTableName}
-      (shopDomain, scriptContent)
-      VALUES (?, ?)
-      RETURNING id;
-    `;
+            INSERT INTO ${this.scriptTableName}
+                (shopDomain, scriptContent)
+            VALUES (?, ?)
+            RETURNING entryId;
+        `;
         const rawResults = await this.__query(query, [
             shopDomain,
             scriptContent,
         ]);
-        return rawResults[0].id;
+        return rawResults[0].entryId;
     },
 
-    read: async function (id) {
+    read: async function (entryId) {
         await this.ready;
 
         const query = `
-      SELECT * FROM ${this.scriptTableName}
-      WHERE id = ?;
-    `;
+            SELECT * FROM ${this.scriptTableName}
+            WHERE entryId = ?;
+        `;
 
-        const rows = await this.__query(query, [id]);
+        const rows = await this.__query(query, [entryId]);
         if (!Array.isArray(rows) || rows.length !== 1) return undefined;
 
         return rows[0];
@@ -47,59 +43,52 @@ export const ScriptDB ={
         await this.ready;
 
         const query = `
-    SELECT * FROM ${this.scriptTableName}
-    WHERE shopDomain = ?;
-  `;
-
+            SELECT * FROM ${this.scriptTableName}
+            WHERE shopDomain = ?;
+        `;
         const rows = await this.__query(query, [shopDomain]);
-      //  console.log('Query result:', rows);
-
-        if (!Array.isArray(rows)) {
-            console.log('rows is not an array');
-        }
 
         if (!Array.isArray(rows) || rows.length < 1) {
             console.log('Returning undefined');
             return undefined;
         }
-
         return rows[0];
     },
 
-
-
-    update: async function (id, { scriptContent }) {
+    update: async function (entryId, { scriptContent }) {
         await this.ready;
 
         const query = `
-      UPDATE ${this.scriptTableName}
-      SET scriptContent = ?
-      WHERE id = ?;
-    `;
+            UPDATE ${this.scriptTableName}
+            SET scriptContent = ?
+            WHERE entryId = ?;
+        `;
 
-        await this.__query(query, [scriptContent, id]);
+        await this.__query(query, [scriptContent, entryId]);
 
         return true;
     },
-    delete: async function (id) {
+
+    delete: async function (entryId) {
         await this.ready;
 
         const query = `
-      DELETE FROM ${this.scriptTableName}
-      WHERE id = ?;
-    `;
+            DELETE FROM ${this.scriptTableName}
+            WHERE entryId = ?;
+        `;
 
-        await this.__query(query, [id]);
+        await this.__query(query, [entryId]);
 
         return true;
     },
+
     list: async function (shopDomain) {
         await this.ready;
 
         const query = `
-      SELECT * FROM ${this.scriptTableName}
-      WHERE shopDomain = ?;
-    `;
+            SELECT * FROM ${this.scriptTableName}
+            WHERE shopDomain = ?;
+        `;
 
         const results = await this.__query(query, [shopDomain]);
 
@@ -115,13 +104,13 @@ export const ScriptDB ={
             this.ready = Promise.resolve();
         } else {
             const query = `
-        CREATE TABLE ${this.scriptTableName} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          shopDomain VARCHAR(511) NOT NULL,
-          scriptContent TEXT NOT NULL,
-          createdAt DATETIME NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime'))
-        )
-      `;
+                CREATE TABLE ${this.scriptTableName} (
+                entryId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                shopDomain VARCHAR(511) NOT NULL,
+                scriptContent TEXT NOT NULL,
+                createdAt DATETIME NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime'))
+                )
+            `;
 
             this.ready = this.__query(query);
         }
@@ -129,11 +118,11 @@ export const ScriptDB ={
 
     __hasScriptsTable: async function () {
         const query = `
-      SELECT name FROM sqlite_schema
-      WHERE
-        type = 'table' AND
-        name = ?;
-    `;
+            SELECT name FROM sqlite_schema
+            WHERE
+                type = 'table' AND
+                name = ?;
+        `;
 
         const rows = await this.__query(query, [this.scriptTableName]);
 
@@ -151,13 +140,14 @@ export const ScriptDB ={
             });
         });
     },
+
     listAll: async function () {
         try {
             await this.ready;
 
             const query = `
-      SELECT * FROM ${this.scriptTableName};
-    `;
+                SELECT * FROM ${this.scriptTableName};
+            `;
 
             const results = await this.__query(query);
 
@@ -167,4 +157,4 @@ export const ScriptDB ={
         }
     }
 
-}
+};
