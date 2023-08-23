@@ -59,7 +59,7 @@ export async function createNewEntry(shopDomain, script) {
     await ScriptDB.init();
     const existingEntry = await ScriptDB.readByShopDomain(shopDomain);
 
-    if (!existingEntry || await existingEntry.scriptContent !== script) {
+    if (!existingEntry) {
       // Call the create method to insert a new record
       const newEntryId = await ScriptDB.create({
         shopDomain: shopDomain,
