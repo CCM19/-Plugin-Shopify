@@ -24,6 +24,7 @@ export const logger = winston.createLogger({
 });
 
 /**
+ * fetches script from DB
  *
  * @param shopDomain
  * @returns {null|*}
@@ -35,6 +36,7 @@ export async function fetchScript(shopDomain) {
     const shop = await ScriptDB.readByShopDomain(shopDomain);
     if (!shop) {
       logger.error(`No such a shop in DB:${shopDomain} `)
+      return null;
     }
     return shop.scriptContent;
 
@@ -42,11 +44,15 @@ export async function fetchScript(shopDomain) {
     logger.error("fetchScript error:",e)
     return null
   }
-
-
 }
 
-
+/**
+ * creates a new DB entry if an entry is not already in DB
+ *
+ * @param shopDomain
+ * @param script
+ * @returns {Promise<void>}
+ */
 export async function createNewEntry(shopDomain, script) {
   try {
     // Initialize the ScriptDB if it's not already initialized
@@ -71,6 +77,7 @@ export async function createNewEntry(shopDomain, script) {
 }
 
 /**
+ *Generates Pattern from cleaned fetched script
  *
  * @param shopDomain
  * @returns {RegExp}
@@ -85,9 +92,8 @@ async function fetchPattern(shopDomain) {
   return new RegExp(regexPattern);
 }
 
-
-
 /**
+ *Cuts the html surrounding from the script
  *
  * @param script
  * @returns {null|*}
@@ -101,6 +107,7 @@ export async function stripScript(script) {
     return null;
   }
 }
+
 /**
  * searches and removes the script in the liquid
  *
@@ -111,10 +118,11 @@ export async function stripScript(script) {
 export async function deleteScript(template, shopDomain){
 
   const pattern = await fetchPattern(shopDomain)
+
   try{
     let updatedTemplate;
 
-    if(template.match(pattern)){
+    if(pattern.test(template)){
       updatedTemplate=template.replace(pattern,' ');
       logger.warn("script removed");
     }else{
@@ -124,8 +132,23 @@ export async function deleteScript(template, shopDomain){
       return updatedTemplate;
 
   }catch (error) {
-    logger.error("error in deletescript",error);
+    logger.error("error in deleteScript",error);
     return template;
+  }
+}
+
+/**
+ *
+ * @param id
+ * @returns {Promise<*>}
+ */
+export async function deleteScriptFromDB(id){
+  try {
+    await ScriptDB.delete(id)
+    return id;
+  }catch (e) {
+    logger.error("couldnt remove script from DB",e)
+    return e;
   }
 }
 
