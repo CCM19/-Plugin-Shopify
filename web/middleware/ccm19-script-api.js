@@ -2,9 +2,15 @@ import express from "express";
 import bodyParser from "body-parser";
 import "@shopify/shopify-api/adapters/node";
 
-import {deleteScript, logger, modifyTemplateHelper} from "../helpers/script-helper.js";
+import {
+  createNewEntry,
+  deleteScript, deleteScriptFromDB,
+  fetchScript,
+  logger,
+  modifyTemplateHelper,
+} from "../helpers/script-helper.js";
+import {ScriptDB} from "../script-db.js";
 
-let script;
 /**
  * Fetches the ID of the Main theme of the store via the shopify api
  * @param shop  shopUrl
@@ -26,15 +32,15 @@ async function getMainThemeID(shop, accessToken) {
     return error;
   }
 }
+
 /**
- * Fetches  the main template liquid for further manipulation
+ * Fetches the main template liquid for further manipulation
  *
  * @param shop shopUrl
  * @param accessToken
  * @param themeID retrieved from getMainThemeID
  * @returns {Promise<*>}
  */
-
 async function getMainTemplate(shop, accessToken, themeID) {
   try {
     const assetKey = 'layout/theme.liquid';
@@ -98,8 +104,7 @@ async function putTemplate(shop, accessToken, updatedTemplate) {
     });
     return await response.json();
   } catch (error) {
-    logger.error('error in putTemplate');
-    logger.error(error);
+    logger.error('error in putTemplate',error);
     return error;
   }
 }
@@ -119,9 +124,21 @@ export default function applyScriptApiEndpoints(app) {
    */
   app.post('/api/script/set', async (req, res) => {
     try {
-      script =decodeURIComponent( await req.body.inputScript);
+      const script =  decodeURIComponent(await req.body.inputScript);
+      await createNewEntry(await res.locals.shopify.session.shop, script);
       res.send({status: 'success', script});
     } catch (error) {
+      res.status(500).send({status: 'error', message: error.message});
+    }
+  });
+  /**
+   * gets the script from db
+   */
+  app.get('/api/script/get',async (req,res)=>{
+    try {
+      const script = await fetchScript(res.locals.shopify.session.shop)
+      res.status(200).json({ status: 'success', script });
+    }catch (error) {
       res.status(500).send({status: 'error', message: error.message});
     }
   });
@@ -130,16 +147,29 @@ export default function applyScriptApiEndpoints(app) {
    * endpoint to remove the script from the template
    */
   app.get('/api/template/delete',async (req,res) =>{
+
+    const shop = await res.locals.shopify.session.shop;
+
     try{
-      const shop = res.locals.shopify.session.shop;
 
       const template = await getTemplate(shop,res.locals.shopify.session.accessToken);
 
-      const modifiedTemplate = await deleteScript(template);
+      const modifiedTemplate = await deleteScript(template, shop);
 
       const response = await putTemplate(shop, res.locals.shopify.session.accessToken, modifiedTemplate);
 
-      logger.warn(`Removed Script of ${shop}`);
+      logger.warn(`Removed Script of ${shop} from Template`);
+
+      try {
+
+        const shopData = await ScriptDB.readByShopDomain(shop);
+        const dbDelete = await deleteScriptFromDB(shopData.entryId);
+        logger.warn(`Removed Script with id ${dbDelete} from Database`)
+
+      }catch (error) {
+        logger.error(`Error while trying to remove Database entry for ${shop}`)
+        res.status(500).send({status: 'error', message: error.message});
+      }
 
       res.send({status: 'success', response});
     }catch (error) {
@@ -150,7 +180,6 @@ export default function applyScriptApiEndpoints(app) {
 
   /**
      * modifies the template with the script
-     *
      */
   app.get('/api/template/modify', async (req, res) => {
     try {
@@ -158,7 +187,7 @@ export default function applyScriptApiEndpoints(app) {
 
       const template = await getTemplate(shop,res.locals.shopify.session.accessToken)
 
-      const modifiedTemplate = await modifyTemplateHelper(script, template);
+      const modifiedTemplate = await modifyTemplateHelper(await fetchScript(shop), template, shop);
 
       const response = await putTemplate(shop, res.locals.shopify.session.accessToken, modifiedTemplate);
 
@@ -195,12 +224,14 @@ export default function applyScriptApiEndpoints(app) {
 
   app.get('/shop/redact', async (req, res) => {
     logger.warn("shop redact has been requested")
+    const shop = req.body.shopDomain;
     try {
-      res.status(200).send({status:'success'});
+      const shopData = await ScriptDB.readByShopDomain(shop);
+      const dbDelete = await deleteScriptFromDB(shopData.entryId);
+      res.status(200).send({status:'success'},);
     }catch (e) {
       logger.error(e)
       res.status(500).send({status:'error'});
     }
   });
-
 }
