@@ -5,6 +5,7 @@ import {join} from "path"
 import {restResources} from "@shopify/shopify-api/rest/admin/2023-04";
 import {ScriptDB} from "./script-db.js";
 import sqlite3 from "sqlite3";
+import {billingConfig} from "./billing.js";
 
 //const sessionDb = new SQLiteSessionStorage(dbFile);
 const database = new sqlite3.Database(join(process.cwd(), "script_db.sqlite"));
@@ -22,7 +23,7 @@ const shopify = shopifyApp({
     shopifyApiSecretKey: apiSecret,
     scopes: scopes,
     restResources,
-    billing: undefined,
+    billing: billingConfig,
   },
   auth: {
     path: "/api/auth",
