@@ -17,6 +17,19 @@ const resources = {
           internalErrorMessage: "Es ist ein interner Fehler aufgetreten. Bitte kontaktieren Sie den Support. Vielen Dank für Ihr Verständnis.",
         },
       },
+      billing:{
+        free:"Free",
+        submit:"Jetzt ausprobieren",
+        listText: "Enthält alle Standard Features\n" +
+            "und zusätzlich",
+        features: {
+          Feature1: "Alle Daten in Deutschland, keine US Anbieter.",
+          Feature2: "1 Domain inkl.",
+          Feature3: " 5.000 Impressions / Monat inkl.",
+          Feature4: "TTDSG-, DSGVO-, CCPA-, BDSG-, LGPD-, POPIA-konform",
+          Feature5: "1 User"
+        }
+      }
     },
   },
   en: {
