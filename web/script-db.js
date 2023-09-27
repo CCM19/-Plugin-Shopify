@@ -76,10 +76,13 @@ export const ScriptDB = {
             DELETE FROM ${this.scriptTableName}
             WHERE entryId = ?;
         `;
+        try {
+            await this.__query(query, [entryId]);
 
-        await this.__query(query, [entryId]);
-
-        return true;
+            return true;
+        }catch (error){
+            throw new Error(error);
+        }
     },
 
     list: async function (shopDomain) {
