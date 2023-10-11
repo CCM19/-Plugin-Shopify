@@ -1,0 +1,51 @@
+{
+  "name": "ccm19-integration",
+  "version": "1.0.0",
+  "main": "web/index.js",
+  "license": "UNLICENSED",
+  "scripts": {
+    "shopify": "shopify",
+    "build": "shopify app build",
+    "dev": "shopify app dev",
+    "info": "shopify app info",
+    "generate": "shopify app generate",
+    "deploy": "shopify app deploy"
+  },
+  "dependencies": {
+    "@shopify/app": "^3.46.0",
+    "@shopify/app-bridge": "^3.7.2",
+    "@shopify/app-bridge-react": "^3.7.2",
+    "@shopify/app-bridge-utils": "^3.5.1",
+    "@shopify/cli": "^3.46.0",
+    "@shopify/hydrogen": "^2023.1.4",
+    "aws-sdk": "^2.1467.0",
+    "body-parser": "^1.20.1",
+    "dotenv": "^16.0.3",
+    "eslint-plugin-react": "^7.32.2",
+    "express": "^4.18.2",
+    "install": "^0.13.0",
+    "mapbox": "^1.0.0-beta10",
+    "mock-aws-s3": "^4.0.2",
+    "nock": "^13.3.3",
+    "node-fetch": "^3.3.0",
+    "node-gyp": "^9.4.0",
+    "npm": "^10.1.0",
+    "react-refresh": "^0.14.0",
+    "shopify-api-node": "^3.12.2",
+    "sqlite3": "^5.1.4",
+    "winston": "^3.8.2"
+  },
+  "author": "jona",
+  "devDependencies": {
+    "@babel/core": "^7.21.4",
+    "@babel/eslint-parser": "^7.21.3",
+    "@babel/preset-env": "^7.21.4",
+    "@babel/preset-react": "^7.18.6",
+    "@shopify/eslint-plugin": "^42.1.0",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^8.37.0",
+    "prettier": "^2.8.7",
+    "standard": "^17.0.0",
+    "typescript": "^5.0.3"
+  }
+}
