@@ -1,0 +1,5 @@
+
+.plan{
+    display: flex !important;
+    flex-flow: row wrap !important;
+}
