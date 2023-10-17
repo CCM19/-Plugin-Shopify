@@ -1,16 +1,16 @@
 import React, {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {
-    AlphaCard,
-    Button,
-    Layout,
-    Page,
-    Select,
-    VerticalStack,
+  AlphaCard, Box,
+  Button,
+  Layout,
+  Page,
+  Select,
+  VerticalStack,
 } from '@shopify/polaris';
 
 import {useAuthenticatedFetch} from '../hooks/index.js';
-import styles from '../css/styles.module.css'
+import styles from '../css/styles.module.css';
 
 const FeatureList = ({featureKey, maxFeatures, t}) => {
   const loadedFeatures = Object.keys(t(featureKey)).filter(
@@ -122,8 +122,7 @@ const Billing = () => {
     setSelectedPlan(billingOption);
     const billingPlan = selectedSection + billingOption;
 
-
-    if(selectedSection === "business") {
+    if (selectedSection === "business") {
       const billingPlan =
           selectedSection + billingOption + selectedTier;
     }
@@ -134,7 +133,7 @@ const Billing = () => {
         body: JSON.stringify({billingPlan}),
       });
       if (url) {
-        console.log(url)
+        console.log(url);
         window.location.href = url.redirectUrl;
       }
     } catch (error) {
@@ -144,115 +143,111 @@ const Billing = () => {
 
   return (
     <Page title={t('billing.options.title')} >
-      <div className={styles.plan}>
       <Layout>
-        <Layout.Section oneHalf>
-          <AlphaCard title={<h2 style={{fontWeight: 'bold', fontSize: '1.5rem'}}>{t('billing.starter.title')}</h2>} sectioned>
-              <VerticalStack alignment="center">
-            <VerticalStack alignment="center" gap="4">
-              <p><h1 style={{fontWeight: 'bold', fontSize: '1.5rem'}}>{t('billing.starter.title')}</h1></p>
-              <VerticalStack gap="4">
-                <VerticalStack>
-                  <p>
-                    <h1 style={{fontWeight: 'bolder', fontSize: '1.5rem', textAlign: 'center'}}>
-                        {pricingData.starter[billingOption]} €
-                      </h1>
-                  </p>
-                  <p>
-                    <h1 style={{fontWeight: 'normal', textAlign: 'center', fontSize: '0.8rem'}}> {billingOption === 'Monthly'
+        <div className={styles.gridContainer}>
+          <div className={styles.layoutSection}>
+            <Layout.Section >
+              <Box className={styles.alphaCard}>
+                <VerticalStack alignment="center">
+                  <VerticalStack alignment="center" gap="4">
+                    <h1 className={styles.title}>{t('billing.starter.title')}</h1>
+                    <VerticalStack gap="4">
+                      <VerticalStack>
+                        <h1 className={styles.pricingDataStyle}>
+                          {pricingData.starter[billingOption]} €
+                        </h1>
+                        <h1 className={styles.pricingLabel}> {billingOption === 'Monthly'
                                         ? t('billing.options.priceLabel')
                                         : t('billing.options.priceLabel')}
-                      </h1>
-                  </p>
+                        </h1>
+                      </VerticalStack>
+                      <VerticalStack gap="2">
+                        <BillingOptions
+                          onOptionChange={handleOptionChange}
+                          selectedOption={billingOption}
+                          t={t}
+                        />
+
+                        <Button primary onClick={handleButtonClick}>
+                          {t('billing.starter.submit')}
+                        </Button>
+
+                      </VerticalStack>
+                      <VerticalStack>
+                        <p>{t('billing.starter.listText')}</p>
+                        <FeatureList
+                          featureKey="billing.starter.features.feature"
+                          maxFeatures={12}
+                          t={t}
+                        />
+                      </VerticalStack>
+                    </VerticalStack>
+
+                  </VerticalStack>
+
                 </VerticalStack>
-                <VerticalStack gap="2">
-                  <BillingOptions
-                    onOptionChange={handleOptionChange}
-                    selectedOption={billingOption}
-                    t={t}
-                  />
 
-                  <Button primary onClick={handleButtonClick}>
-                    {t('billing.starter.submit')}
-                  </Button>
+              </Box>
+            </Layout.Section>
+          </div>
+          <div className={styles.layoutSection}>
+            <Layout.Section>
+              <Box className={styles.alphaCard}>
+                <VerticalStack alignment="center" gap="4">
+                  <h1 className={styles.title}>{t('billing.business.title')}</h1>
+                  <VerticalStack gap="4">
+                    <VerticalStack>
 
-                </VerticalStack>
-                <VerticalStack>
-                  <p>{t('billing.starter.listText')}</p>
-                  <FeatureList
-                    featureKey="billing.starter.features.feature"
-                    maxFeatures={12}
-                    t={t}
-                  />
-                </VerticalStack>
-              </VerticalStack>
-
-            </VerticalStack>
-
-          </VerticalStack>
-
-          </AlphaCard>
-        </Layout.Section>
-
-        <Layout.Section oneHalf>
-          <AlphaCard title={t('billing.business.title')} sectioned>
-            <VerticalStack alignment="center" gap="4">
-
-              <p><h1 style={{fontWeight: 'bold', fontSize: '1.5rem'}}>{t('billing.business.title')}</h1></p>
-              <VerticalStack gap="4">
-                <VerticalStack>
-                  <p>
-                    <h1 style={{fontWeight: 'bolder', fontSize: '1.5rem', textAlign: 'center'}}>
+                      <h1 className={styles.pricingDataStyle}>
                         {pricingData.business[billingOption][selectedTier]} €
                       </h1>
-                  </p>
-                  <p>
-                    <h1 style={{fontWeight: 'normal', textAlign: 'center', fontSize: '0.8rem'}}> {billingOption === 'Monthly'
+                      <h1 className={styles.pricingLabel}> {billingOption === 'Monthly'
                                         ? t('billing.options.priceLabel')
                                         : t('billing.options.priceLabel')}
                       </h1>
-                  </p>
+                    </VerticalStack>
+                    <VerticalStack gap="2" alignment="center">
+                      <BillingOptions
+                        onOptionChange={handleOptionChange}
+                        selectedOption={billingOption}
+                        t={t}
+                      />
+                      <BusinessSection
+                        onTierChange={handleTierChange}
+                        selectedTier={selectedTier}
+                        t={t}
+                      />
+                      <Button fullWidth="false" textAlign="center" primary onClick={handleButtonClick}>
+                        {t('billing.business.submit')}
+                      </Button>
+                    </VerticalStack>
+                    <VerticalStack>
+                      <p>{t('billing.business.listText')}</p>
+                      <FeatureList
+                        featureKey="billing.business.features.feature"
+                        maxFeatures={16}
+                        t={t}
+                      />
+                    </VerticalStack>
+                  </VerticalStack>
                 </VerticalStack>
-                <VerticalStack gap="2" alignment="center">
-                  <BillingOptions
-                    onOptionChange={handleOptionChange}
-                    selectedOption={billingOption}
-                    t={t}
-                  />
-                  <BusinessSection
-                    onTierChange={handleTierChange}
-                    selectedTier={selectedTier}
-                    t={t}
-                  />
-                  <Button fullWidth="false" textAlign="center" primary onClick={handleButtonClick}>
-                    {t('billing.business.submit')}
-                  </Button>
-                </VerticalStack>
-                <VerticalStack>
-                  <p>{t('billing.business.listText')}</p>
-                  <FeatureList
-                    featureKey="billing.business.features.feature"
-                    maxFeatures={16}
-                    t={t}
-                  />
-                </VerticalStack>
-              </VerticalStack>
-            </VerticalStack>
-          </AlphaCard>
-        </Layout.Section>
+              </Box>
+            </Layout.Section>
+          </div>
+        </div>
 
         <Layout.Section>
           <AlphaCard title={t('billing.standardFeatures.title')} sectioned>
-            <p><h1 style={{fontWeight: 'bold', fontSize: '1.2rem'}}>{t('billing.standardFeatures.title')}</h1></p>
-                <FeatureList
-                  featureKey="billing.standardFeatures.features.feature"
-                  maxFeatures={42}
-                  t={t}
-                />
+            <h1 className={styles.title}>{t('billing.standardFeatures.title')}</h1>
+            <FeatureList
+              featureKey="billing.standardFeatures.features.feature"
+              maxFeatures={42}
+              t={t}
+            />
           </AlphaCard>
         </Layout.Section>
+
       </Layout>
-      </div>
     </Page>
   );
 };
