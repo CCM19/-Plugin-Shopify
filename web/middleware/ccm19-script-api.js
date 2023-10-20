@@ -10,6 +10,8 @@ import {
   modifyTemplateHelper,
 } from "../helpers/script-helper.js";
 import {ScriptDB} from "../script-db.js";
+import shopify from "../shopify.js";
+import cors from "cors";
 
 /**
  * Fetches the ID of the Main theme of the store via the shopify api
@@ -117,7 +119,7 @@ async function putTemplate(shop, accessToken, updatedTemplate) {
 export default function applyScriptApiEndpoints(app) {
   app.use(express.json());
   app.use(bodyParser.json());
-
+  app.use(cors())
 
   /**
    * sets the script for global use
@@ -198,6 +200,26 @@ export default function applyScriptApiEndpoints(app) {
       res.status(500).send({status: 'error', message: error.message});
     }
   });
+
+  /**
+   * Billing endpoint returns the billing url
+   */
+  app.post('/api/billing/set-plan',async (req,res) =>{
+    try{
+      const session = res.locals.shopify.session;
+
+      const confirm =await shopify.api.billing.request({
+        session,
+        plan: req.body.billingPlan,
+        isTest: true,
+        returnObject: true
+      });
+      res.status(200).json({ redirectUrl: confirm });
+    }catch (error){
+      logger.debug(error)
+      res.status(500).send({message:error.message})
+    }
+  })
 
   /**
    * Mandatory webhook section
