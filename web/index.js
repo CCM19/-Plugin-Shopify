@@ -3,10 +3,10 @@ import { join } from 'path';
 import { readFileSync } from 'fs';
 import express from 'express';
 import serveStatic from 'serve-static';
-
+import {billingConfig} from "./billing.js";
 import shopify from './shopify.js';
 import applyScriptApiEndpoints from './middleware/ccm19-script-api.js';
-import GDPRWebhookHandlers from './gdpr.js';
+import webhookHandlers from './webhook-handlers.js'
 
 const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT, 10);
 
@@ -32,12 +32,31 @@ app.get(shopify.config.auth.path, shopify.auth.begin());
 app.get(
   shopify.config.auth.callbackPath,
   shopify.auth.callback(),
-  shopify.redirectToShopifyOrAppRoot()
+    // Request payment if required
+    async (req, res, next) => {
+      const plans = Object.keys(billingConfig);
+      const session = res.locals.shopify.session;
+      const hasPayment = await shopify.api.billing.check({
+        session,
+        plans: plans,
+        isTest: true,
+      });
+      if (hasPayment) {
+        next();
+      } else {
+          const host = req.query.host;
+          res.redirect(`/Billing?host=${host}&session=${encodeURIComponent(JSON.stringify(session))}`)
+
+      }
+    },
+    shopify.redirectToShopifyOrAppRoot()
 );
-app.post(
-  shopify.config.webhooks.path,
-  shopify.processWebhooks({ webhookHandlers: GDPRWebhookHandlers })
-);
+
+
+app.post( shopify.config.webhooks.path, shopify.processWebhooks({
+  webhookHandlers
+}) );
+
 
 // All endpoints after this point will require an active session
 app.use('/api/*', shopify.validateAuthenticatedSession());
