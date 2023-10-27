@@ -1,17 +1,17 @@
-import express from "express";
-import bodyParser from "body-parser";
-import "@shopify/shopify-api/adapters/node";
+import express from 'express'
+import bodyParser from 'body-parser'
+import '@shopify/shopify-api/adapters/node'
 
 import {
-  createNewEntry,
-  deleteScript, deleteScriptFromDB,
+  deleteScript,
+  deleteScriptFromDB,
   fetchScript,
   logger,
-  modifyTemplateHelper,
-} from "../helpers/script-helper.js";
-import {ScriptDB} from "../script-db.js";
-import shopify from "../shopify.js";
-import cors from "cors";
+  modifyTemplateHelper, updateScriptEntry,
+} from '../helpers/script-helper.js'
+import { ScriptDB } from '../script-db.js'
+import shopify from '../shopify.js'
+import cors from 'cors'
 
 /**
  * Fetches the ID of the Main theme of the store via the shopify api
@@ -112,6 +112,29 @@ async function putTemplate(shop, accessToken, updatedTemplate) {
 }
 
 /**
+ *fetches all data from User Shop
+ *
+ * @param shop
+ * @param accessToken
+ * @returns {Promise<*>}
+ */
+async function fetchShopData(shop, accessToken){
+  try {
+    const response = await fetch(`https://${shop}/admin/api/2023-04/shop.json`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': accessToken,
+      },
+    });
+    return await response.json();
+  } catch (error) {
+    logger.error(error);
+    return error;
+  }
+
+}
+/**
  * applyScriptApiEndpoints
  *
  * @param app
@@ -127,7 +150,7 @@ export default function applyScriptApiEndpoints(app) {
   app.post('/api/script/set', async (req, res) => {
     try {
       const script =  decodeURIComponent(await req.body.inputScript);
-      await createNewEntry(await res.locals.shopify.session.shop, script);
+      await updateScriptEntry(await res.locals.shopify.session.shop, script);
       res.send({status: 'success', script});
     } catch (error) {
       res.status(500).send({status: 'error', message: error.message});
@@ -214,6 +237,8 @@ export default function applyScriptApiEndpoints(app) {
         isTest: true,
         returnObject: true
       });
+      const shopData = await fetchShopData(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
+      
       res.status(200).json({ redirectUrl: confirm });
     }catch (error){
       logger.debug(error)
@@ -243,6 +268,8 @@ export default function applyScriptApiEndpoints(app) {
       res.status(500).send({status:'error'});
     }
   });
+
+
 
   app.get('/shop/redact', async (req, res) => {
     logger.warn("shop redact has been requested")
