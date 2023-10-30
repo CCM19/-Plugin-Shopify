@@ -190,7 +190,7 @@ export const ScriptDB = {
           (country, streetAddress,additionalAddress, city, zip, shopDataId)
       VALUES (?, ?, ?, ?, ?, ?);
   `;
-    const rawResults = await this.__query(query, [country, streetAddress,additionalAddress, city, zip, shopDataId]);
+    const rawResults = await this.__query(query, [country, streetAddress, additionalAddress, city, zip, shopDataId]);
     return rawResults[0].entryId;
   },
 
@@ -243,12 +243,35 @@ export const ScriptDB = {
     });
   },
 
-  async listAll() {
+  async listAllInScript() {
     await this.ready;
     const query = `
                 SELECT * FROM ${this.scriptTableName};
             `;
     return await this.__query(query);
+  },
+
+  async getRequiredCcmData(shopId) {
+    await this.ready;
+    const query = `
+    SELECT SD.eMail AS "E-Mail-Adresse",
+           SD.name AS Vorname,
+           SD.company AS Firma,
+           SA.streetAddress || ' ' || SA.additionalAddress AS "Straße und Hausnummer",
+           SA.zip AS PLZ,
+           SA.city AS Stadt,
+           SA.country AS "Primäres Land"
+    FROM ${this.shopDataTableName} AS SD
+    LEFT JOIN ${this.shopAddressTableName} AS SA ON SD.shopDataId = SA.shopDataId
+    WHERE SD.shopId = ?;
+  `;
+    const results = await this.__query(query, [shopId]);
+
+    if (results.length === 1) {
+      return results[0];
+    } else {
+      return undefined;
+    }
   },
 
 };
