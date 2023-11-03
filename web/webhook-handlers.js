@@ -1,7 +1,9 @@
-import { DeliveryMethod } from "@shopify/shopify-api";
-import { addScriptEntry} from './helpers/script-helper.js'
+import {DeliveryMethod} from "@shopify/shopify-api";
+
+import {addScriptEntry, logger, shopRedactHelper} from './helpers/script-helper.js';
 
 export default {
+
   /**
    * Customers can request their data from a store owner. When this happens,
    * Shopify invokes this webhook.
@@ -74,6 +76,11 @@ export default {
     callbackUrl: "/api/webhooks",
     callback: async (topic, shop, body, webhookId) => {
       const payload = JSON.parse(body);
+      try {
+        await shopRedactHelper(payload.shop_id);
+      } catch (error) {
+        webhookErrorHandler("shop/redact", error);
+      }
       // Payload has the following shape:
       // {
       //   "shop_id": 954889,
@@ -81,24 +88,36 @@ export default {
       // }
     },
   },
+
   /**
    *Fires after User confirms Payment. Starts the process of Script receiving
    *
    */
-  APP_SUBSCRIPTIONS_UPDATE:{
+  APP_SUBSCRIPTIONS_UPDATE: {
     deliveryMethod: DeliveryMethod.Http,
     callbackUrl: "/api/webhooks",
     callback: async (topic, shop, body, webhookId) => {
       const payload = JSON.parse(body);
       const GraphQlshopId = payload.app_subscription.admin_graphql_api_shop_id;
       const shopId = GraphQlshopId.split('/').pop();
-      try{
+      try {
         await addScriptEntry(shopId);
 
-      }catch (error) {
-
-
+      } catch (error) {
+        webhookErrorHandler("app/subscription_update", error);
       }
-      },
+    },
   },
 };
+
+/**
+ * simple error print function
+ *
+ * @param name
+ * @param error
+ */
+function webhookErrorHandler(name, error) {
+
+  logger.error(`critical error webhook:${name}`, error);
+
+}
