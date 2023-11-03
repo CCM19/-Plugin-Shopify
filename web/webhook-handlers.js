@@ -1,4 +1,5 @@
 import { DeliveryMethod } from "@shopify/shopify-api";
+import { addScriptEntry} from './helpers/script-helper.js'
 
 export default {
   /**
@@ -79,5 +80,25 @@ export default {
       //   "shop_domain": "{shop}.myshopify.com"
       // }
     },
+  },
+  /**
+   *Fires after User confirms Payment. Starts the process of Script receiving
+   *
+   */
+  APP_SUBSCRIPTIONS_UPDATE:{
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: "/api/webhooks",
+    callback: async (topic, shop, body, webhookId) => {
+      const payload = JSON.parse(body);
+      const GraphQlshopId = payload.app_subscription.admin_graphql_api_shop_id;
+      const shopId = GraphQlshopId.split('/').pop();
+      try{
+        await addScriptEntry(shopId);
+
+      }catch (error) {
+
+
+      }
+      },
   },
 };
