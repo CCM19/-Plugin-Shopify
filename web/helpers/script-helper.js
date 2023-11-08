@@ -1,5 +1,7 @@
 import winston from 'winston';
-import {ScriptDB} from "../script-db.js";
+
+import {ScriptDB} from '../script-db.js';
+import {fetchScriptFromCcm} from '../middleware/ccm19-script-api.js';
 
 // debug and error logger
 
@@ -8,7 +10,7 @@ export const logger = winston.createLogger({
   format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.prettyPrint(),
-      winston.format.json()
+      winston.format.json(),
   ),
   transports: [
     new winston.transports.File({
@@ -17,7 +19,7 @@ export const logger = winston.createLogger({
     new winston.transports.Console({
       format: winston.format.combine(
           winston.format.colorize(),
-          winston.format.simple()
+          winston.format.simple(),
       ),
     }),
   ],
@@ -35,45 +37,112 @@ export async function fetchScript(shopDomain) {
 
     const shop = await ScriptDB.readByShopDomain(shopDomain);
     if (!shop) {
-      logger.error(`No such a shop in DB:${shopDomain} `)
+      logger.error(`No such a shop in DB:${shopDomain} `);
       return null;
     }
     return shop.scriptContent;
 
-  } catch (e) {
-    logger.error("fetchScript error:",e)
-    return null
+  } catch (error) {
+    logger.error("fetchScript error:", error);
+    return error;
   }
 }
 
 /**
- * creates a new DB entry if an entry is not already in DB
+ * updates the script entry in the DB
  *
  * @param shopDomain
  * @param script
  * @returns {Promise<void>}
  */
-export async function createNewEntry(shopDomain, script) {
+export async function updateScriptEntry(shopDomain, script) {
   try {
-    // Initialize the ScriptDB if it's not already initialized
     await ScriptDB.init();
     const existingEntry = await ScriptDB.readByShopDomain(shopDomain);
+    if (existingEntry) {
+      await ScriptDB.update(existingEntry.id, {scriptContent: script});
 
-    if (!existingEntry) {
-      // Call the create method to insert a new record
-      const newEntryId = await ScriptDB.create({
-        shopDomain: shopDomain,
-        scriptContent: script,
-      });
-      console.log(`New entry created with ID: ${newEntryId}`);
-
-    } else if (existingEntry && existingEntry.scriptContent !== script) {
-      await ScriptDB.update(existingEntry.id, { scriptContent: script });
-      console.log(`Entry has been updated for shop: ${shopDomain}`);
     }
   } catch (error) {
-    console.error('Error occurred while create entry:', error);
+    logger.error("error update Script entry via ShopDomain", error);
   }
+}
+
+/**
+ *  adds the script to the db after the script has been acquired
+ *
+ * @param shopId
+ * @returns {Promise<boolean>}
+ */
+export async function addScriptEntry(shopId) {
+  const CcmResponse = await fetchScriptFromCcm(shopId);
+  try {
+    const shopEntry = await ScriptDB.readByShopId(shopId);
+    if (shopEntry) {
+      const script = CcmResponse.content;
+      const decodedScript = decodeURIComponent(script);
+      const response = await ScriptDB.update(shopEntry.shopDataId, {scriptContent: decodedScript});
+
+      logger.warn("added script for", shopEntry);
+      return response;
+    } else {
+      logger.error("Shop entry not found for ShopId", shopId);
+    }
+  } catch (error) {
+    logger.error("couldn't add Script entry", error);
+    return error;
+  }
+}
+
+/**
+ * creates the new DB entry's for the shops
+ *
+ * @param shopData
+ * @param abo
+ * @returns {Promise<string>}
+ */
+export async function createNewEntry(shopData, abo) {
+  try {
+    await ScriptDB.init();
+    const shopObject = shopData.shop;
+    const existingEntry = await ScriptDB.readByShopId(shopObject.id.toString());
+    if (!existingEntry) {
+      const newEntryId = await ScriptDB.addShopData({
+        shopId: shopObject.id.toString(), // to avoid getting it saved as dotted notation
+        name: shopObject.shop_owner,
+        company: shopObject.name,
+        eMail: shopObject.email,
+        abo,
+      });
+
+      const newAddressEntry = await ScriptDB.addAddress({
+        country: shopObject.country_name,
+        streetAddress: shopObject.address1,
+        additionalAddress: shopObject.address2,
+        city: shopObject.city,
+        zip: shopObject.zip,
+        shopDataId: newEntryId,
+      });
+
+      const newScriptTableEntry = await ScriptDB.createScriptEntry({
+        shopDomain: shopObject.myshopify_domain,
+        scriptContent: "",
+        shopDataId: newEntryId,
+      });
+
+      logger.warn(`New Entry generated at ${JSON.stringify(newEntryId)}`);
+
+      return newEntryId;
+
+    } else if (existingEntry) {
+      logger.error(`Shop ${shopObject.name} already exists at ${JSON.stringify(existingEntry)}`);
+      return existingEntry;
+    }
+  } catch (error) {
+    logger.error("error while generating new Entry", error);
+    return error;
+  }
+
 }
 
 /**
@@ -103,7 +172,7 @@ export async function stripScript(script) {
   const matches = syncedScript.match(/\bsrc=([\'"])((?:[^"\'?#]|(?!\1)[\"\'])*\/(?:ccm19|app)\.js\?(?:[^"\']|(?!\1).)*?)\1/i);
   if (matches && matches[2]) {
     return matches[2];
-  }else{
+  } else {
     return null;
   }
 }
@@ -115,24 +184,24 @@ export async function stripScript(script) {
  * @param shopDomain
  * @returns {template}
  */
-export async function deleteScript(template, shopDomain){
+export async function deleteScript(template, shopDomain) {
 
-  const pattern = await fetchPattern(shopDomain)
+  const pattern = await fetchPattern(shopDomain);
 
-  try{
+  try {
     let updatedTemplate;
 
-    if(pattern.test(template)){
-      updatedTemplate=template.replace(pattern,' ');
+    if (pattern.test(template)) {
+      updatedTemplate = template.replace(pattern, ' ');
       logger.warn("script removed");
-    }else{
+    } else {
       logger.warn("no script to remove found");
       return template;
     }
-      return updatedTemplate;
+    return updatedTemplate;
 
-  }catch (error) {
-    logger.error("error in deleteScript",error);
+  } catch (error) {
+    logger.error("error in deleteScript", error);
     return template;
   }
 }
@@ -142,13 +211,13 @@ export async function deleteScript(template, shopDomain){
  * @param id
  * @returns {Promise<*>}
  */
-export async function deleteScriptFromDB(id){
+export async function deleteScriptFromDB(id) {
   try {
-    await ScriptDB.delete(id)
+    await ScriptDB.delete(id);
     return id;
-  }catch (e) {
-    logger.error("couldnt remove script from DB",e)
-    return e;
+  } catch (error) {
+    logger.error("couldn`t remove script from DB", error);
+    return error;
   }
 }
 
@@ -162,7 +231,7 @@ export async function deleteScriptFromDB(id){
  */
 export async function modifyTemplateHelper(script, template, shopDomain) {
 
-  const pattern = await fetchPattern(shopDomain)
+  const pattern = await fetchPattern(shopDomain);
 
   try {
 
@@ -192,8 +261,19 @@ export async function modifyTemplateHelper(script, template, shopDomain) {
 
     return updatedTemplate;
   } catch (error) {
-    logger.error("error in modifyTemplateHelper",error);
+    logger.error("error in modifyTemplateHelper", error);
     return template;
+  }
+}
+
+export async function shopRedactHelper(shopId) {
+  try {
+    if (await ScriptDB.readByShopId(shopId)) {
+      return await ScriptDB.deleteTablesByShopId(shopId);
+    }
+  } catch (error) {
+    logger.error("error in Webhook triggered delete of DB entry", error);
+    return error;
   }
 }
 

@@ -98,8 +98,8 @@ export default {
     callbackUrl: "/api/webhooks",
     callback: async (topic, shop, body, webhookId) => {
       const payload = JSON.parse(body);
-      const GraphQlshopId = payload.app_subscription.admin_graphql_api_shop_id;
-      const shopId = GraphQlshopId.split('/').pop();
+      const GraphQlShopId = payload.app_subscription.admin_graphql_api_shop_id;
+      const shopId = GraphQlShopId.split('/').pop();
       try {
         await addScriptEntry(shopId);
 
