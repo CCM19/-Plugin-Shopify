@@ -26,48 +26,36 @@ export const ScriptDB = {
     ]);
     return rawResults[0].entryId;
   },
-
-  async read(entryId) {
+  async queryDataFromTable(tableName, criteria){
     await this.ready;
 
     const query = `
-            SELECT * FROM ${this.scriptTableName}
-            WHERE entryId = ?;
-        `;
+        SELECT * FROM ${tableName}
+        WHERE ${criteria.field} = ?;
+    `;
+    const rows = await this.__query(query, [criteria.value]);
 
-    const rows = await this.__query(query, [entryId]);
-    if (!Array.isArray(rows) || rows.length !== 1) { return undefined; }
-
+    if (!Array.isArray(rows) || rows.length < 1) {
+      return undefined;
+    }
     return rows[0];
   },
 
   async readByShopDomain(shopDomain) {
-    await this.ready;
+    const criteria = {
+      field: "shopDomain",
+      value: shopDomain,
+    };
 
-    const query = `
-            SELECT * FROM ${this.scriptTableName}
-            WHERE shopDomain = ?;
-        `;
-    const rows = await this.__query(query, [shopDomain]);
-
-    if (!Array.isArray(rows) || rows.length < 1) {
-      return undefined;
-    }
-    return rows[0];
+    return this.queryDataFromTable(this.scriptTableName, criteria);
   },
   async readByShopId(shopId) {
-    await this.ready;
+    const criteria = {
+      field: "shopId",
+      value: shopId,
+    };
 
-    const query = `
-            SELECT * FROM ${this.shopDataTableName}
-            WHERE shopId = ?;
-        `;
-    const rows = await this.__query(query, [shopId]);
-
-    if (!Array.isArray(rows) || rows.length < 1) {
-      return undefined;
-    }
-    return rows[0];
+    return this.queryDataFromTable(this.shopDataTableName, criteria);
   },
 
   async update(entryId, {scriptContent}) {
@@ -129,7 +117,7 @@ export const ScriptDB = {
         createTablesQueries.push(`
                     CREATE TABLE ${this.scriptTableName} (
                         entryId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        shopDomain VARCHAR(511) PRIMARY KEY NOT NULL,
+                        shopDomain VARCHAR(511) NOT NULL,
                         scriptContent TEXT,
                         createdAt DATETIME NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
                         shopDataId INTEGER,
@@ -142,10 +130,11 @@ export const ScriptDB = {
         createTablesQueries.push(`
                     CREATE TABLE ${this.shopDataTableName} (
                         shopDataId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                        shopId VARCHAR(511) PRIMARY KEY NOT NULL, 
+                        shopId TEXT NOT NULL, 
                         name VARCHAR(511),
                         company VARCHAR(511),
-                        eMail VARCHAR(511) NOT NULL
+                        eMail VARCHAR(511) NOT NULL,
+                        abo VARCHAR(511) NOT NULL
                     )
                 `);
       }
@@ -169,17 +158,17 @@ export const ScriptDB = {
       this.ready = Promise.all(createTablesQueries.map((query) => this.__query(query)));
     }
   },
-  async addShopData({shopId, name, company, eMail}) {
+  async addShopData({shopId, name, company, eMail, abo}) {
     await this.ready;
 
     const query = `
       INSERT INTO ${this.shopDataTableName}
-          ( shopId, name, company, eMail)
-      VALUES (?, ?, ?, ?)
+          ( shopId, name, company, eMail, abo)
+      VALUES (?, ?, ?, ?, ?)
       RETURNING shopDataId;
   `;
-    const rawResults = await this.__query(query, [shopId, name, company, eMail]);
-    return rawResults[0].entryId;
+    const rawResults = await this.__query(query, [shopId, name, company, eMail, abo]);
+    return rawResults[0].shopDataId;
   },
 
   async addAddress({country, streetAddress, additionalAddress, city, zip, shopDataId}) {
@@ -188,10 +177,12 @@ export const ScriptDB = {
     const query = `
       INSERT INTO ${this.shopAddressTableName}
           (country, streetAddress,additionalAddress, city, zip, shopDataId)
-      VALUES (?, ?, ?, ?, ?, ?);
+      VALUES (?, ?, ?, ?, ?, ?)
+      RETURNING addressId;
+
   `;
     const rawResults = await this.__query(query, [country, streetAddress, additionalAddress, city, zip, shopDataId]);
-    return rawResults[0].entryId;
+    return rawResults[0].addressId;
   },
 
   async __hasScriptsTable() {
@@ -255,8 +246,9 @@ export const ScriptDB = {
     await this.ready;
     const query = `
     SELECT SD.eMail AS "E-Mail-Adresse",
-           SD.name AS Vorname,
+           SD.name AS Name,
            SD.company AS Firma,
+           SD.abo AS Tarif,
            SA.streetAddress || ' ' || SA.additionalAddress AS "Straße und Hausnummer",
            SA.zip AS PLZ,
            SA.city AS Stadt,
@@ -273,5 +265,42 @@ export const ScriptDB = {
       return undefined;
     }
   },
+
+  async deleteTablesByShopId(shopId) {
+    await this.ready;
+
+    const shopData = await this.readByShopId(shopId);
+    if (!shopData) {
+      throw new Error("Shop data not found for the provided shopId.");
+    }
+
+    const shopDataId = shopData.shopDataId;
+
+    const deleteScriptTableQuery = `
+    DELETE FROM ${this.scriptTableName}
+    WHERE shopDataId = ?;
+  `;
+
+    const deleteShopDataTableQuery = `
+    DELETE FROM ${this.shopDataTableName}
+    WHERE shopDataId = ?;
+  `;
+
+    const deleteShopAddressTableQuery = `
+    DELETE FROM ${this.shopAddressTableName}
+    WHERE shopDataId = ?;
+  `;
+
+    try {
+      await this.__query(deleteScriptTableQuery, [shopDataId]);
+      await this.__query(deleteShopDataTableQuery, [shopDataId]);
+      await this.__query(deleteShopAddressTableQuery, [shopDataId]);
+
+      return true;
+    } catch (error) {
+      throw new Error("Error deleting tables: " + error.message);
+    }
+  }
+
 
 };
