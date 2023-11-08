@@ -55,11 +55,11 @@ const BusinessSection = ({onTierChange, selectedTier, t}) => {
   };
 
   const tiers = [
-        {label: t('billing.business.tierOne'), value: 'tierOne'},
-        {label: t('billing.business.tierTwo'), value: 'tierTwo'},
-        {label: t('billing.business.tierThree'), value: 'tierThree'},
-        {label: t('billing.business.tierFour'), value: 'tierFour'},
-        {label: t('billing.business.tierFive'), value: 'tierFive'},
+        {label: t('billing.business.tierOne'), value: 'TierOne'},
+        {label: t('billing.business.tierTwo'), value: 'TierTwo'},
+        {label: t('billing.business.tierThree'), value: 'TierThree'},
+        {label: t('billing.business.tierFour'), value: 'TierFour'},
+        {label: t('billing.business.tierFive'), value: 'TierFive'},
   ];
 
   return (
@@ -80,8 +80,7 @@ const Billing = () => {
 
   const [billingOption, setBillingOption] = useState('Monthly');
   const [selectedPlan, setSelectedPlan] = useState('');
-  const [selectedSection, setSelectedSection] = useState('starter');
-  const [selectedTier, setSelectedTier] = useState('tierOne');
+  const [selectedTier, setSelectedTier] = useState('TierOne');
 
   const pricingData = {
     starter: {
@@ -90,18 +89,18 @@ const Billing = () => {
     },
     business: {
       Monthly: {
-        tierOne: '19.90',
-        tierTwo: '39.90',
-        tierThree: '89.90',
-        tierFour: '179.90',
-        tierFive: '299.90',
+        TierOne: '19.90',
+        TierTwo: '39.90',
+        TierThree: '89.90',
+        TierFour: '179.90',
+        TierFive: '299.90',
       },
       Yearly: {
-        tierOne: '16.90',
-        tierTwo: '34.90',
-        tierThree: '79.90',
-        tierFour: '149.90',
-        tierFive: '259.90',
+        TierOne: '16.90',
+        TierTwo: '34.90',
+        TierThree: '79.90',
+        TierFour: '149.90',
+        TierFive: '259.90',
       },
     },
   };
@@ -110,31 +109,27 @@ const Billing = () => {
     setBillingOption(option);
   };
 
-  const handleSectionChange = (section) => {
-    setSelectedSection(section);
-  };
-
   const handleTierChange = (tier) => {
     setSelectedTier(tier);
   };
 
-  const handleButtonClick = async () => {
+  const handleButtonClick = async (billingSection) => {
     setSelectedPlan(billingOption);
-    const billingPlan = selectedSection + billingOption;
-
-    if (selectedSection === "business") {
-      const billingPlan =
-          selectedSection + billingOption + selectedTier;
+    let billingPlan =  billingSection + billingOption;
+    if (billingSection === "business") {
+      billingPlan =
+          billingSection + billingOption + selectedTier;
     }
+    console.log(billingPlan);
     try {
-      const url = await fetch('/api/billing/set-plan', {
+      const response = await fetch('/api/billing/set-plan', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({billingPlan}),
       });
-      if (url) {
-        console.log(url);
-        window.location.href = url.redirectUrl;
+      if (await response) {
+        const redirect = await response.json();
+        window.top.location.replace(redirect.redirectUrl);
       }
     } catch (error) {
       console.error('Fehler beim Festlegen des Abrechnungsplans', error);
@@ -168,7 +163,11 @@ const Billing = () => {
                           t={t}
                         />
 
-                        <Button primary onClick={handleButtonClick}>
+                        <Button
+                          primary onClick={() => {
+                            handleButtonClick("starter");
+                          }}
+                        >
                           {t('billing.starter.submit')}
                         </Button>
 
@@ -217,7 +216,11 @@ const Billing = () => {
                         selectedTier={selectedTier}
                         t={t}
                       />
-                      <Button fullWidth="false" textAlign="center" primary onClick={handleButtonClick}>
+                      <Button
+                        fullWidth="false" textAlign="center" primary onClick={() => {
+                          handleButtonClick("business");
+                        }}
+                      >
                         {t('billing.business.submit')}
                       </Button>
                     </VerticalStack>
