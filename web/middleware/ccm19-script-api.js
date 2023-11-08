@@ -1,17 +1,19 @@
-import express from 'express'
-import bodyParser from 'body-parser'
-import '@shopify/shopify-api/adapters/node'
+import express from 'express';
+import bodyParser from 'body-parser';
+import '@shopify/shopify-api/adapters/node';
+
+import cors from 'cors';
 
 import {
+  createNewEntry,
   deleteScript,
   deleteScriptFromDB,
   fetchScript,
   logger,
   modifyTemplateHelper, updateScriptEntry,
-} from '../helpers/script-helper.js'
-import { ScriptDB } from '../script-db.js'
-import shopify from '../shopify.js'
-import cors from 'cors'
+} from '../helpers/script-helper.js';
+import {ScriptDB} from '../script-db.js';
+import shopify from '../shopify.js';
 
 /**
  * Fetches the ID of the Main theme of the store via the shopify api
@@ -56,7 +58,7 @@ async function getMainTemplate(shop, accessToken, themeID) {
     const responseData = await response.json();
     return responseData.asset && responseData.asset.value;
   } catch (error) {
-    logger.warn("error in getMainTemplate")
+    logger.warn("error in getMainTemplate");
     logger.error(error);
     return error;
   }
@@ -68,15 +70,16 @@ async function getMainTemplate(shop, accessToken, themeID) {
  * @param accessToken
  * @returns {Promise<*>}
  */
-async function getTemplate(shop,accessToken){
+async function getTemplate(shop, accessToken) {
   try {
-    return await getMainTemplate(shop, accessToken,await getMainThemeID(shop, accessToken));
-  }catch (error) {
-    logger.error("error in get template")
-    logger.error(error)
+    return await getMainTemplate(shop, accessToken, await getMainThemeID(shop, accessToken));
+  } catch (error) {
+    logger.error("error in get template");
+    logger.error(error);
     return error;
   }
 }
+
 /**
  *  sends the updated template to the shopify api
  *
@@ -87,7 +90,7 @@ async function getTemplate(shop,accessToken){
  */
 async function putTemplate(shop, accessToken, updatedTemplate) {
 
-  const themeID =await  getMainThemeID(shop,accessToken)
+  const themeID = await getMainThemeID(shop, accessToken);
 
   try {
     const assetKey = 'layout/theme.liquid';
@@ -106,7 +109,7 @@ async function putTemplate(shop, accessToken, updatedTemplate) {
     });
     return await response.json();
   } catch (error) {
-    logger.error('error in putTemplate',error);
+    logger.error('error in putTemplate', error);
     return error;
   }
 }
@@ -118,22 +121,54 @@ async function putTemplate(shop, accessToken, updatedTemplate) {
  * @param accessToken
  * @returns {Promise<*>}
  */
-async function fetchShopData(shop, accessToken){
+async function fetchShopData(shop, accessToken) {
   try {
-    const response = await fetch(`https://${shop}/admin/api/2023-04/shop.json`, {
+    const response = await fetch(`https://${shop}/admin/api/2023-10/shop.json`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'X-Shopify-Access-Token': accessToken,
       },
     });
-    return await response.json();
+
+    return JSON.stringify(await response.json());
   } catch (error) {
     logger.error(error);
     return error;
   }
 
 }
+
+/**
+ * should fetch the script from ccm19 cloud
+ *
+ * @param shopId
+ * @returns {Promise<*>}
+ */
+export async function fetchScriptFromCcm(shopId) {
+  const entryId = await ScriptDB.readByShopId(shopId);
+  if (!entryId) {
+    logger.error("No entry found", entryId);
+  } else {
+    const Ccm19Data = await ScriptDB.getRequiredCcmData(shopId);
+    try {
+      const response = await fetch(` http://localhost:3000/customEndpoint`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(Ccm19Data),
+      });
+      return await response.json();
+    } catch (error) {
+      logger.error("Error in communication with CCM19", error);
+      return error;
+    }
+
+  }
+
+}
+
 /**
  * applyScriptApiEndpoints
  *
@@ -142,28 +177,29 @@ async function fetchShopData(shop, accessToken){
 export default function applyScriptApiEndpoints(app) {
   app.use(express.json());
   app.use(bodyParser.json());
-  app.use(cors())
+  app.use(cors());
 
   /**
    * sets the script for global use
    */
   app.post('/api/script/set', async (req, res) => {
     try {
-      const script =  decodeURIComponent(await req.body.inputScript);
+      const script = decodeURIComponent(await req.body.inputScript);
       await updateScriptEntry(await res.locals.shopify.session.shop, script);
       res.send({status: 'success', script});
     } catch (error) {
       res.status(500).send({status: 'error', message: error.message});
     }
   });
+
   /**
    * gets the script from db
    */
-  app.get('/api/script/get',async (req,res)=>{
+  app.get('/api/script/get', async (req, res) => {
     try {
-      const script = await fetchScript(res.locals.shopify.session.shop)
-      res.status(200).json({ status: 'success', script });
-    }catch (error) {
+      const script = await fetchScript(res.locals.shopify.session.shop);
+      res.status(200).json({status: 'success', script});
+    } catch (error) {
       res.status(500).send({status: 'error', message: error.message});
     }
   });
@@ -171,13 +207,13 @@ export default function applyScriptApiEndpoints(app) {
   /**
    * endpoint to remove the script from the template
    */
-  app.get('/api/template/delete',async (req,res) =>{
+  app.get('/api/template/delete', async (req, res) => {
 
     const shop = await res.locals.shopify.session.shop;
 
-    try{
+    try {
 
-      const template = await getTemplate(shop,res.locals.shopify.session.accessToken);
+      const template = await getTemplate(shop, res.locals.shopify.session.accessToken);
 
       const modifiedTemplate = await deleteScript(template, shop);
 
@@ -189,15 +225,15 @@ export default function applyScriptApiEndpoints(app) {
 
         const shopData = await ScriptDB.readByShopDomain(shop);
         const dbDelete = await deleteScriptFromDB(shopData.entryId);
-        logger.warn(`Removed Script with id ${dbDelete} from Database`)
+        logger.warn(`Removed Script with id ${dbDelete} from Database`);
 
-      }catch (error) {
-        logger.error(`Error while trying to remove Database entry for ${shop}`)
+      } catch (error) {
+        logger.error(`Error while trying to remove Database entry for ${shop}`);
         res.status(500).send({status: 'error', message: error.message});
       }
 
       res.send({status: 'success', response});
-    }catch (error) {
+    } catch (error) {
       logger.error(error);
       res.status(500).send({status: 'error', message: error.message});
     }
@@ -210,7 +246,7 @@ export default function applyScriptApiEndpoints(app) {
     try {
       const shop = res.locals.shopify.session.shop;
 
-      const template = await getTemplate(shop,res.locals.shopify.session.accessToken)
+      const template = await getTemplate(shop, res.locals.shopify.session.accessToken);
 
       const modifiedTemplate = await modifyTemplateHelper(await fetchScript(shop), template, shop);
 
@@ -227,28 +263,27 @@ export default function applyScriptApiEndpoints(app) {
   /**
    * Billing endpoint returns the billing url
    */
-  app.post('/api/billing/set-plan',async (req,res) =>{
-    try{
+  app.post('/api/billing/set-plan', async (req, res) => {
+    try {
       const session = res.locals.shopify.session;
 
-      const confirm =await shopify.api.billing.request({
+      const confirm = await shopify.api.billing.request({
         session,
         plan: req.body.billingPlan,
         isTest: true,
-        returnObject: true
+        returnObject: true,
       });
       const shopData = await fetchShopData(res.locals.shopify.session.shop, res.locals.shopify.session.accessToken);
-      
-      res.status(200).json({ redirectUrl: confirm });
-    }catch (error){
-      logger.debug(error)
-      res.status(500).send({message:error.message})
+      await createNewEntry(JSON.parse(shopData), req.body.billingPlan);
+      res.status(200).json({redirectUrl: confirm});
+    } catch (error) {
+      logger.debug(error);
+      res.status(500).send({message: error.message});
     }
-  })
+  });
 
-  /**
-   * Mandatory webhook section
-   */
+/*
+
   app.get('/customers/data_request', async (req, res) => {
     logger.warn("customer data has been requested")
     try {
@@ -269,8 +304,6 @@ export default function applyScriptApiEndpoints(app) {
     }
   });
 
-
-
   app.get('/shop/redact', async (req, res) => {
     logger.warn("shop redact has been requested")
     const shop = req.body.shopDomain;
@@ -283,4 +316,5 @@ export default function applyScriptApiEndpoints(app) {
       res.status(500).send({status:'error'});
     }
   });
+  */
 }
